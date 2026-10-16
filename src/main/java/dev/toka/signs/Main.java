@@ -21,7 +21,7 @@ public final class Main extends PluginBase {
             var backend=Backend.valueOf(getConfig().getString("storage.backend","sqlite").toUpperCase(Locale.ROOT));
             registry=new SignRegistry(new StoreConfig(backend,getDataFolder().toPath().resolve("storage").resolve(backend.name().toLowerCase(Locale.ROOT)),1));
             instance=this;
-            getLogger().info("載入告示牌共 "+registry.records().size()+" 個");
+            getLogger().info("§b載入告示牌共 §a"+registry.records().size()+" §b個");
         }catch(Exception error){throw new IllegalStateException("告示牌儲存無法載入；請保留原始資料",error);}
     }
     private static Main service(){

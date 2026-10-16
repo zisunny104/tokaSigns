@@ -1,0 +1,13 @@
+name: tokaSigns
+main: dev.toka.signs.Main
+version: "0.1.0"
+api: ["1.0.4"]
+author: zisunny104
+softdepend: [zero]
+commands:
+  signs:
+    description: 查詢告示牌服務狀態
+    permission: tokaSigns.admin
+permissions:
+  tokaSigns.admin:
+    default: op

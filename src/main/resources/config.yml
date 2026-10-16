@@ -1,0 +1,8 @@
+# 告示牌資料副本的儲存格式：sqlite（預設）、json 或 yaml，由共用的 tokaStorage 提供。
+# 切換格式需要用明確的搬遷工具，不能只改這裡就當作搬完。
+storage:
+  backend: sqlite
+# 首版只匯入資料副本與提供 API；舊告示牌事件繼續由 zero 處理。
+# 是否讓這個插件處理告示牌的點擊。首版請保持 false；就算改成 true，zero 的告示牌模組啟用時這裡也不會處理，避免重複觸發。
+actions:
+  enabled: false

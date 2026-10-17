@@ -39,7 +39,7 @@ cmd:
 # ${0}＝目前有設定權限且 provider 已就緒的類型 ID 清單，例如 [10, 11, 41]
 help:
   sign:
-    - "*|§6§ltokaSigns 說明 §7（別名 /signs；<必填>、[選填]）"
+    - "*|§6=== §f§ltokaSigns 說明§r §6=== §7（別名 /signs；<必填>、[選填]）"
     - "help|§e/sign help §7- §b顯示此說明"
     - "status|§e/sign status §7- §b登記數、事件接管及保護 provider"
     - "inspect|§e/sign inspect <ID> [--force] §7- §b位置、牌面與功能設定對照"
@@ -80,10 +80,10 @@ msg:
   status: "§7[告示]§r §b登記 §a${0} §b筆；事件接管=§a${1}§b；保護 provider=§a${2}"
   # /sign cancel
   cancelled: "§7[告示]§r §b已取消操作，保留剪貼簿。"
-  # 請玩家先複製才能貼上
-  copyFirst: "§7[告示]§r §e請先複製告示牌。"
+  # 貼上前尚未複製
+  copyFirst: "§7[告示]§r §e尚未複製告示牌。"
   # 進入點選模式；${0}＝操作名稱（status.mode.*）
-  clickToDo: "§7[告示]§r §b請點選告示牌進行§a${0}"
+  clickToDo: "§7[告示]§r §b點選告示牌進行§a${0}"
   # 設定完成
   setDone: "§7[告示]§r §a功能設定完成。"
   # 複製／貼上完成
@@ -91,11 +91,11 @@ msg:
 
 # ───────────────────────── 錯誤與拒絕（err） ─────────────────────────
 err:
-  unknownCommand: "§7[告示]§r §c未知指令，請使用 §e/sign help§c。"
+  unknownCommand: "§7[告示]§r §c未知指令，指令列表見 §e/sign help§c。"
   noPermission: "§7[告示]§r §c沒有此指令的權限。"
   noExtraArgs: "§7[告示]§r §c此指令不接受其他參數。"
   playerOnly: "§7[告示]§r §c此指令限遊戲內玩家使用。"
-  eventsNotOwned: "§7[告示]§r §c事件接管尚未啟用，請以 §e/sign status §c查看。"
+  eventsNotOwned: "§7[告示]§r §c事件接管尚未啟用（§e/sign status§c）。"
   # 用法錯誤；${0}＝用法文字（cmd.sign.usage*）
   usage: "§7[告示]§r §c用法：§e${0}"
   typeNotAuthorized: "§7[告示]§r §c類型沒有授權或 provider 尚未就緒。"
@@ -103,8 +103,8 @@ err:
   noSetHere: "§7[告示]§r §c沒有此位置的設定權限。"
   cannotDefine: "§7[告示]§r §c功能類型無法設定。"
   providerNotReady: "§7[告示]§r §c此功能的 provider 尚未就緒。"
-  signChanged: "§7[告示]§r §c告示牌已變更，請重新開啟。"
-  signDataNotReady: "§7[告示]§r §c告示牌資料尚未就緒，請稍後再試。"
+  signChanged: "§7[告示]§r §c告示牌已變更。"
+  signDataNotReady: "§7[告示]§r §c告示牌資料尚未就緒。"
   noCopyPaste: "§7[告示]§r §c此處無法複製或貼上；需要保護服務授權。"
   cannotUse: "§7[告示]§r §c目前無法使用此告示牌。"
   # 以下為例外訊息（會被指令攔截後以 msg.reply 加前綴送出），不含前綴
@@ -114,16 +114,16 @@ err:
     noCancelPermission: "§c沒有取消工作權限"
     noJobPermission: "§c沒有工作權限"
     noForcePermission: "§c沒有強制載入權限"
-    jobRunning: "§c已有維護工作執行中，請查看 §e/sign jobs"
+    jobRunning: "§c已有維護工作執行中（§e/sign jobs§c）"
     signNotFound: "§c找不到告示牌 ID"
     badId: "§cID 必須為非負整數。"
   # 直接填寫四行時的檢查結果（SignInput 回傳這些 key）
   input:
     fourLines: "§7[告示]§r §c需要四行文字。"
     badFormat: "§7[告示]§r §c文字格式不正確或過長。"
-    leaveBlank34: "§7[告示]§r §c功能牌第 3、4 行請留空，顯示內容由功能產生。"
-    leaveBlank2: "§7[告示]§r §c此功能第 2 行請留空。"
-    needCode: "§7[告示]§r §c第 2 行需要功能代碼；請查看 §e/sign help§c。"
+    leaveBlank34: "§7[告示]§r §c功能牌第 3、4 行須留空。"
+    leaveBlank2: "§7[告示]§r §c此功能第 2 行須留空。"
+    needCode: "§7[告示]§r §c第 2 行需要功能代碼。"
 
 # ───────────────────────── 表單與告示牌牌面（ui） ─────────────────────────
 ui:
@@ -148,7 +148,7 @@ ui:
 log:
   # 啟動完成；${0}＝載入的告示牌數
   loaded: "§b載入告示牌共 §a${0} §b個"
-  storageFailed: "§c告示牌儲存無法載入；請保留原始資料"
+  storageFailed: "§c告示牌儲存無法載入"
   storageCloseFailed: "§e告示牌儲存關閉失敗"
   # ${0}＝例外類別名稱
   policyFailed: "§e告示牌權限服務失敗，已拒絕此次操作：§a${0}"

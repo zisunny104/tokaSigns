@@ -80,6 +80,8 @@ msg:
   copyFirst: "§7[告示]§r §e尚未複製告示牌。"
   # 進入點選模式；${0}＝操作名稱（status.mode.*）
   clickToDo: "§7[告示]§r §b點選告示牌進行§a${0}"
+  # 頂部訊息區（tokaDisplay）顯示的單行提示，不含前綴
+  useFailed: "這個告示牌的目標目前無法使用"
   # 設定完成
   setDone: "§7[告示]§r §a功能設定完成。"
   # 複製／貼上完成

@@ -16,6 +16,10 @@ actions:
   # 注意：zero 的 sign 模組仍啟用時，本插件不接管事件；缺少業務／保護 provider 的動作會被拒絕。
   enabled: true
 
+messages:
+  # 告示牌無法使用時，頂部訊息區（tokaDisplay）提示的停留秒數，可填 1 到 60 的整數。未安裝 tokaDisplay 時改用聊天室提示。
+  use-failed-seconds: 5
+
 # 維護工作（/sign check、/sign refresh）每個 tick 的處理量。
 # 實際數量會依 TPS、tick 使用率與近期耗時自動調整；下列數值是上限，不是固定每 tick 筆數。
 maintenance:

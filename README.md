@@ -49,6 +49,7 @@
 | key | 預設 | 說明 |
 | --- | --- | --- |
 | `actions.enabled` | `true` | 是否由本插件接管告示牌的點擊、建立、編輯與破壞；zero 的 sign 模組仍啟用時不會接管 |
+| `messages.use-failed-seconds` | `5` | 告示牌無法使用時，tokaDisplay 頂部訊息的停留秒數（1–60）；未安裝 tokaDisplay 時改用聊天室，同一玩家 2 秒內只提示一次 |
 | `maintenance.normal.max-records` | `32` | 一般維護每 tick 最多處理幾筆（1–128） |
 | `maintenance.normal.budget-ms` | `2` | 一般維護每 tick 最多花費毫秒 |
 | `maintenance.normal.min-tps` | `17` | TPS 低於此值就暫停維護 |
@@ -71,4 +72,4 @@
 - **功能牌點了沒反應？** 用 `/sign status` 確認事件接管為是、保護服務已就緒，且該類型的插件已啟用。
 - **看不到某個類型可以設定？** 需要該類型的 `tokaSigns.type.<ID>` 權限，且提供該類型的插件已就緒。
 
-目前版本 0.4.4
+目前版本 0.4.5

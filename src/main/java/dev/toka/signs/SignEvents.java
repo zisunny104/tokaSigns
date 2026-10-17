@@ -19,11 +19,16 @@ public final class SignEvents implements Listener {
     private static final Map<UUID,Setup> setups=new HashMap<>();
     private static final Map<UUID,String[]> clips=new HashMap<>();
     private static final Map<String,Integer> TYPES=Map.of("tpr",10,"tpp",11,"tpl",12,"tps",13,"pay",21,"b",31,"s",32,"item",33,"status",41);
+    private static final UseNotice notice=new UseNotice(2000);
+    private void notifyFailed(Player p){
+        int seconds=Math.max(1,Math.min(60,main.getConfig().getInt("messages.use-failed-seconds",5)));
+        notice.notice(p.getUniqueId(),System.currentTimeMillis(),()->UseNotice.displayFlash(p,Main.tr("msg.useFailed"),seconds),()->p.sendMessage(Main.tr("err.cannotUse")));
+    }
     SignEvents(Main main){this.main=main;}
     static void setMode(Player p,String mode){if(mode.equals("paste")&&!clips.containsKey(p.getUniqueId())){p.sendMessage(Main.tr("msg.copyFirst"));return;}modes.put(p.getUniqueId(),mode);p.sendMessage(Main.tr("msg.clickToDo",Main.tr(switch(mode){case "copy"->"status.mode.copy";case "paste"->"status.mode.paste";case "edit"->"status.mode.edit";default->"status.mode.set";})));}
     static void firePrepared(Main main,SignChangeEvent event){prepared.add(event);try{main.getServer().getPluginManager().callEvent(event);}finally{prepared.remove(event);}}
     static void cancel(Player p){modes.remove(p.getUniqueId());edits.remove(p.getUniqueId());setups.remove(p.getUniqueId());}
-    static void clear(){modes.clear();clips.clear();edits.clear();setups.clear();}
+    static void clear(){notice.clear();modes.clear();clips.clear();edits.clear();setups.clear();}
     static void setDefinitionMode(Player p,String type,String code){
         Integer n=TYPES.get(type.toLowerCase(Locale.ROOT));if(type.equalsIgnoreCase("buy"))n=31;if(type.equalsIgnoreCase("sell"))n=32;
         if(n==null)try{n=Integer.parseInt(type);}catch(NumberFormatException ignored){}
@@ -83,7 +88,7 @@ public final class SignEvents implements Listener {
             else{String[] text=clips.get(p.getUniqueId());if(text==null)return;sign.setText(text.clone());}
             modes.remove(p.getUniqueId());p.sendMessage(Main.tr("msg.done"));return;
         }
-        if(r!=null){event.setCancelled();try{if(!Main.activate(p,r))p.sendMessage(Main.tr("err.cannotUse"));}catch(Exception|LinkageError error){main.getLogger().warning(Main.tr("log.actionFailed",r.id(),error.getClass().getSimpleName()));}}
+        if(r!=null){event.setCancelled();try{if(!Main.activate(p,r))notifyFailed(p);}catch(Exception|LinkageError error){main.getLogger().warning(Main.tr("log.actionFailed",r.id(),error.getClass().getSimpleName()));}}
     }
     @EventHandler(priority=EventPriority.HIGHEST,ignoreCancelled=true)
     public void change(SignChangeEvent event){

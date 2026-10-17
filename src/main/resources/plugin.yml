@@ -1,9 +1,9 @@
 name: tokaSigns
 main: dev.toka.signs.Main
-version: "0.4.4"
+version: "0.4.5"
 api: ["1.0.4"]
 author: zisunny104
-softdepend: [zero]
+softdepend: [zero, tokaDisplay]
 description: Nukkit 告示牌管理：複製貼上、編輯、功能牌設定與維護檢查
 commands:
   sign:

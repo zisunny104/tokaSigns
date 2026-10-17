@@ -1,6 +1,6 @@
 name: tokaSigns
 main: dev.toka.signs.Main
-version: "0.4.2"
+version: "0.4.3"
 api: ["1.0.4"]
 author: zisunny104
 softdepend: [zero]

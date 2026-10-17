@@ -26,7 +26,7 @@ public final class Main extends PluginBase {
         messages=new Messages(getClass().getClassLoader(),getDataFolder().toPath(),getConfig().getString("language","zh-TW"),line->getLogger().warning(line));
         try{
             var backend=Backend.valueOf(getConfig().getString("storage.backend","sqlite").toUpperCase(Locale.ROOT));
-            registry=new SignRegistry(new StoreConfig(backend,getDataFolder().toPath().resolve("storage").resolve(backend.name().toLowerCase(Locale.ROOT)),1));
+            registry=new SignRegistry(new StoreConfig(backend,getDataFolder().toPath().resolve("storage").resolve(backend.name().toLowerCase(Locale.ROOT)),1),error->getLogger().warning(messages.text("log.saveFailed",error.getClass().getSimpleName())));
             actions.put(41,(p,r)->true);definitions.put(41,(p,r,lines)->statusLines());
             maintenance=new SignMaintenance(this);
             getServer().getScheduler().scheduleRepeatingTask(this,new cn.nukkit.scheduler.Task(){public void onRun(int tick){maintenance.tick();}},1);

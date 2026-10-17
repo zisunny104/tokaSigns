@@ -146,6 +146,8 @@ log:
   loaded: "§b載入告示牌共 §a${0} §b個"
   storageFailed: "§c告示牌儲存無法載入"
   storageCloseFailed: "§e告示牌儲存關閉失敗"
+  # 背景寫入失敗或關閉逾時；${0}＝例外類別名稱
+  saveFailed: "§e告示牌資料寫入失敗：§a${0}"
   # ${0}＝例外類別名稱
   policyFailed: "§e告示牌權限服務失敗，已拒絕此次操作：§a${0}"
   # ${0}＝告示牌 ID

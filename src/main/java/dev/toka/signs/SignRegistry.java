@@ -4,15 +4,23 @@ import com.google.gson.*;
 import dev.toka.storage.*;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.function.Consumer;
 
 /** Immutable records and indexed coordinates; unknown business types remain opaque. */
 public final class SignRegistry implements AutoCloseable {
     public record SignRecord(int id,int x,int y,int z,String world,int type,String code,String info,int ticks){}
     private final DocumentStore store;
+    // Memory updates on the caller thread; disk writes run on one daemon thread, newest snapshot wins.
+    private final ExecutorService writer=Executors.newSingleThreadExecutor(task->{var thread=new Thread(task,"tokaSigns-writer");thread.setDaemon(true);return thread;});
+    private final java.util.concurrent.atomic.AtomicReference<JsonObject> pending=new java.util.concurrent.atomic.AtomicReference<>();
+    private final Consumer<Throwable> writeError;
     private JsonArray source;
     private Map<Integer,SignRecord> ids=Map.of();
     private Map<String,SignRecord> locations=Map.of();
-    public SignRegistry(StoreConfig config)throws IOException{
+    public SignRegistry(StoreConfig config)throws IOException{this(config,error->{});}
+    public SignRegistry(StoreConfig config,Consumer<Throwable> writeError)throws IOException{
+        this.writeError=writeError;
         store=DocumentStore.open(config);
         try{
             var doc=store.load("registry");
@@ -43,10 +51,17 @@ public final class SignRegistry implements AutoCloseable {
         var oldIds=ids;var oldLocations=locations;
         try {
             load(rows);var doc=new JsonObject();doc.addProperty("schema",1);doc.add("records",rows);
+            source=rows.deepCopy();enqueue(doc);
+        }catch(RuntimeException error){ids=oldIds;locations=oldLocations;throw error;}
+    }
+    private void enqueue(JsonObject doc){pending.set(doc);writer.execute(this::flush);}
+    /** Runs on the writer thread; a null snapshot means a later task already wrote the newest one. */
+    private void flush(){
+        var doc=pending.getAndSet(null);if(doc==null)return;
+        try{
             store.save("registry",doc);
             if(!store.load("registry").orElseThrow().equals(doc))throw new IOException("Registry readback mismatch");
-            source=rows.deepCopy();
-        }catch(IOException|RuntimeException error){ids=oldIds;locations=oldLocations;throw error;}
+        }catch(IOException|RuntimeException error){writeError.accept(error);}
     }
     public synchronized void replaceIfEmptyOrEqual(String json)throws IOException{
         JsonArray rows=JsonParser.parseString(json).getAsJsonArray();
@@ -73,7 +88,13 @@ public final class SignRegistry implements AutoCloseable {
     public static JsonObject encode(SignRecord r){var row=new JsonObject();row.addProperty("id",r.id());row.addProperty("x",r.x());row.addProperty("y",r.y());row.addProperty("z",r.z());row.addProperty("level",r.world());row.addProperty("type",r.type());row.addProperty("code",r.code());row.addProperty("info",r.info());row.addProperty("ticks",r.ticks());return row;}    public Optional<SignRecord> at(String world,int x,int y,int z){return Optional.ofNullable(locations.get(key(world,x,y,z)));}
     public Collection<SignRecord> records(){return List.copyOf(ids.values());}
     public Set<Integer> referencesWorld(String world){var result=new HashSet<Integer>();for(var row:ids.values())if(row.world().equals(world))result.add(row.id());return Set.copyOf(result);}
-    public void close()throws IOException{store.close();}
+    /** Waits (bounded) for queued writes before closing the store. */
+    public void close()throws IOException{
+        writer.shutdown();
+        try{if(!writer.awaitTermination(10,TimeUnit.SECONDS)){writeError.accept(new TimeoutException("Registry write queue"));writer.shutdownNow();}}
+        catch(InterruptedException error){Thread.currentThread().interrupt();writer.shutdownNow();}
+        store.close();
+    }
 }
 
 

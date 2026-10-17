@@ -67,18 +67,38 @@ public final class Main extends PluginBase {
         Action a=m.actions.get(sign.type());return a!=null&&a.execute(player,sign);
     }
     public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
-        if(!sender.hasPermission("tokaSigns.admin"))return false;
+        if(!sender.hasPermission("tokaSigns.admin")){sender.sendMessage("[告示]需要 tokaSigns.admin 權限（預設 OP）。");return true;}
+        if(args.length==0||args[0].equalsIgnoreCase("help")){sendHelp(sender);return true;}
+        if(args.length==1&&args[0].equalsIgnoreCase("status")){
+            sender.sendMessage("[告示]登記 "+registry.records().size()+" 筆；事件接管="+ownsEvents()+"；動作開關="+getConfig().getBoolean("actions.enabled",true)+"；保護 provider="+(policyOwner==null?"未就緒":policyOwner));
+            sender.sendMessage("[告示]動作類型："+new TreeSet<>(actions.keySet())+"；設定類型："+new TreeSet<>(definitions.keySet()));return true;
+        }
+        if(args.length==1&&args[0].equalsIgnoreCase("cancel")){
+            if(sender instanceof Player p){SignEvents.cancel(p);sender.sendMessage("[告示]已取消待選取與待提交操作。");}else sender.sendMessage("[告示]此操作限遊戲內玩家使用。");return true;
+        }
+        if(!(sender instanceof Player)){sender.sendMessage("[告示]編輯、複製、貼上與設定限遊戲內玩家使用。");sendHelp(sender);return true;}
         if(args.length==1&&(args[0].equalsIgnoreCase("copy")||args[0].equalsIgnoreCase("paste"))&&sender instanceof Player p){
             if(!ownsEvents()){sender.sendMessage("[告示]舊告示牌模組仍在管理中。");return true;}
             SignEvents.setMode(p,args[0].toLowerCase(Locale.ROOT));return true;
         }
-        if(sender instanceof Player p&&args.length>=1&&args[0].equalsIgnoreCase("edit")){
+        if(sender instanceof Player p&&args.length==1&&args[0].equalsIgnoreCase("edit")){
             if(ownsEvents())SignEvents.setMode(p,"edit");else sender.sendMessage("[告示]舊告示牌模組仍在管理中。");return true;
         }
         if(sender instanceof Player p&&args.length>=3&&args[0].equalsIgnoreCase("set")){
             if(ownsEvents())SignEvents.setDefinitionMode(p,args[1],String.join(" ",Arrays.copyOfRange(args,2,args.length)));else sender.sendMessage("[告示]舊告示牌模組仍在管理中。");return true;
         }
-        sender.sendMessage("tokaSigns："+registry.records().size()+" 筆；事件接管="+ownsEvents()+"；/sign copy、/sign paste");return true;
+        sender.sendMessage("[告示]未知指令或參數不正確。");sendHelp(sender);return true;
+    }
+    private void sendHelp(CommandSender sender){
+        sender.sendMessage("§b── tokaSigns 指令說明 ──");
+        sender.sendMessage("/sign help — 顯示說明（別名 /signs）");
+        sender.sendMessage("/sign status — 登記數、接管狀態與 provider（後台可用）");
+        sender.sendMessage("/sign edit — 點選一般牌編輯四行；功能牌編輯代碼");
+        sender.sendMessage("/sign copy、/sign paste — 點選一般牌複製／貼上文字");
+        sender.sendMessage("/sign set <類型> <代碼> — 點選牌設定功能；buy/b=31、sell/s=32、tpr=10、tpp=11、item=33、status=41");
+        sender.sendMessage("/sign cancel — 取消待選取／表單操作，保留剪貼簿");
+        sender.sendMessage("[告示]需要 tokaSigns.admin（預設 OP）及位置保護授權；功能須 provider 就緒。tpl/tps/pay 缺 provider 時不建立。");
+        sender.sendMessage("[告示]缺少或損壞的方塊實體不會自動重建，請保留世界備份。");
     }
     private String[] statusLines(){return new String[]{"§r§a⦋狀態⦌§r","TPS "+String.format(Locale.ROOT,"%.1f",getServer().getTicksPerSecond()),"載入 "+String.format(Locale.ROOT,"%.1f%%",getServer().getTickUsage()),"↑ "+String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getUpload())+" ↓ "+String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getDownload())};}
     private void updateStatusSigns(){

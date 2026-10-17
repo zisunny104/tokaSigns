@@ -32,7 +32,7 @@ Nukkit 告示牌管理。專案沿用複數名稱 `tokaSigns`；玩家指令保�
 
 `Action.execute(Player, SignRecord)` 執行功能；`Definition.prepare(Player, SignRecord, String[] lines)` 回傳 4 行已確認文字，null 表示拒絕。新建立記錄 ID 由 registry 分配。`SignRecord` 保留業務代碼、說明、ticks 與未知 type，不將 code 當成後台指令執行。
 
-type 10/11/31/32/33 等傳送、交易、物品功能由對應插件 provider 負責，並非此插件內建；type 54 等舊版未實作類型保留但不可執行。不提供舊版表單編輯器、商店設定模式或原生功能資料複製。
+type 10/11/31/32/33 等傳送、交易、物品功能由對應插件 provider 負責，並非此插件內建；type 54 等舊版未實作類型保留但不可執行。提供下述表單編輯與功能設定；不提供原生功能資料複製。
 
 ## 權限與建置
 
@@ -49,3 +49,9 @@ type 10/11/31/32/33 等傳送、交易、物品功能由對應插件 provider �
 `/sign set buy <商品代碼>`、`/sign set sell <商品代碼>`，或 `/sign set <type> <code>`，然後點選目標告示牌，可建立或修改功能牌。這取代舊 ShopBoxSetMode 專用列表；舊設定模式棄用，不再需要特殊商店模式。建立與修改都必須有 Definition、位置 Policy，其他保護插件取消 SignChangeEvent 時不寫入。實際交易仍由對應 Action 驗證商品、金額與玩家權限。
 
 交接工具可先呼叫 `Main.isActionsEnabled()` 確認設定，不會自動改成啟用。
+
+## 指令與損壞資料處理（0.2.1）
+
+`/sign help`（別名 `/signs help`）列出所有指令與限制；`/sign status` 可於後台查接管、保護 provider 及可用類型；`/sign cancel` 取消待選取與待提交操作，保留剪貼簿。未知參數顯示說明。
+
+一般牌保留四行編輯，功能牌編輯代碼。現在不自動修復 NBT：登記資料不包含全部原始文字、雙面文字及其他 NBT，建立空牌可能掩蓋遺失。後續先做唯讀診斷、原始備份與明確單牌修復，再考慮可完整重建類型的自動模式。預設不覆寫既有實體、不強制載入世界。

@@ -21,6 +21,7 @@ public final class SignEvents implements Listener {
     private static final Map<String,Integer> TYPES=Map.of("tpr",10,"tpp",11,"tpl",12,"tps",13,"pay",21,"b",31,"s",32,"item",33,"status",41);
     SignEvents(Main main){this.main=main;}
     static void setMode(Player p,String mode){if(mode.equals("paste")&&!clips.containsKey(p.getUniqueId())){p.sendMessage("[告示]請先複製告示牌。");return;}modes.put(p.getUniqueId(),mode);p.sendMessage("[告示]請點選告示牌進行"+switch(mode){case "copy"->"複製";case "paste"->"貼上";case "edit"->"編輯";default->"功能設定";});}
+    static void cancel(Player p){modes.remove(p.getUniqueId());edits.remove(p.getUniqueId());setups.remove(p.getUniqueId());}
     static void clear(){modes.clear();clips.clear();edits.clear();setups.clear();}
     static void setDefinitionMode(Player p,String type,String code){
         Integer n=TYPES.get(type.toLowerCase(Locale.ROOT));if(type.equalsIgnoreCase("buy"))n=31;if(type.equalsIgnoreCase("sell"))n=32;

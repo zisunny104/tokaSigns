@@ -86,7 +86,7 @@ public final class Main extends PluginBase {
         SignEvents.setMode(p,op);return true;
     }
     private void sendHelp(CommandSender sender){
-        sender.sendMessage("§b── tokaSigns 可用指令（別名 /signs）──");
+        sender.sendMessage("§b── tokaSigns 可用指令（別名 /signs；<必填>、[選填]）──");
         if(permits(sender,"help"))sender.sendMessage("/sign help — 此說明");
         if(permits(sender,"status"))sender.sendMessage("/sign status — 登記數、接管及保護 provider");
         if(sender instanceof Player){
@@ -100,7 +100,20 @@ public final class Main extends PluginBase {
                 sender.sendMessage("[告示]目前有設定權限且 provider 已就緒的類型："+types+"（可直接填數字ID）");
             }
         }
+        if(permits(sender,"set")){
+            sender.sendMessage("§b── 直接填寫告示牌：§6[ §f第1行 | 第2行 | 第3行 | 第4行§6 ] ──");
+            sender.sendMessage("[告示]金色外框代表整面告示牌；<參數> 必填，[參數] 選填。外框、標記及 | 不用輸入，「留空」不填字。");
+            signInputHelp(sender,10,"tpr | <區域代碼> | 留空 | 留空 — 區域傳送");
+            signInputHelp(sender,11,"tpp | <傳送點名稱> | 留空 | 留空 — 公共傳送點");
+            signInputHelp(sender,31,"b | <商品代碼> | 留空 | 留空 — 購買商品");
+            signInputHelp(sender,32,"s | <商品代碼> | 留空 | 留空 — 回收商品");
+            signInputHelp(sender,33,"item | 留空 | 留空 | 留空 — 物品管理入口");
+            signInputHelp(sender,41,"status | 留空 | 留空 | 留空 — 伺服器狀態");
+        }
         sender.sendMessage("[告示]顯示指令權限不代表任何位置都可修改；仍檢查保護服務、功能 provider 與接管狀態。");
+    }
+    private void signInputHelp(CommandSender sender,int type,String example){
+        if(definitions.containsKey(type)&&permits(sender,"type."+type))sender.sendMessage("§6[ §f"+example.substring(0,example.indexOf(" — "))+"§6 ]§r"+example.substring(example.indexOf(" — ")));
     }
     private String[] statusLines(){return new String[]{"§r§a⦋狀態⦌§r","TPS "+String.format(Locale.ROOT,"%.1f",getServer().getTicksPerSecond()),"載入 "+String.format(Locale.ROOT,"%.1f%%",getServer().getTickUsage()),"↑ "+String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getUpload())+" ↓ "+String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getDownload())};}
     private void updateStatusSigns(){

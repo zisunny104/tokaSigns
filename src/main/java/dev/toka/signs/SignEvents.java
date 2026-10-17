@@ -86,6 +86,7 @@ public final class SignEvents implements Listener {
         if(prepared.contains(event)||!main.ownsEvents())return;
         var old=record(event.getBlock());Integer type=TYPES.get(event.getLine(0).toLowerCase(Locale.ROOT));
         if(old==null&&type==null)return;
+        if(old==null){String issue=SignInput.validate(type,event.getLines());if(issue!=null){event.setCancelled();event.getPlayer().sendMessage("[告示]"+issue);return;}}
         var b=event.getBlock();var r=old==null?new SignRegistry.SignRecord(main.getRegistry().nextId(),b.getFloorX(),b.getFloorY(),b.getFloorZ(),b.getLevel().getFolderName(),type,event.getLine(1),null,-1):old;
         if(!main.canDefine(event.getPlayer(),r.type())||!main.allowed(event.getPlayer(),r,old==null?"create":"edit")){event.setCancelled();return;}
         // Managed edits go through providers; never silently convert a business sign to plain text.

@@ -1,48 +1,74 @@
 # tokaSigns
 
-**tokaSigns 0.4.1** 是 Nukkit 告示牌管理插件：接管告示牌的點擊、建立、編輯與破壞，提供複製貼上、功能牌設定，以及告示牌檢查與重繪的維護工作。玩家指令為 `/sign`，別名 `/signs`。
+告示牌管理插件：管理員可複製貼上告示牌文字、編輯牌面、建立點一下就能傳送或交易的功能牌，並批次檢查與更新全服告示牌。指令為 `/sign`（別名 `/signs`）。
 
-## 安裝
+## 主要功能
 
-- 需要 Java 21；已驗證 Nukkit PM1E 4511。
-- 將 `tokaSigns-0.4.1.jar` 放入 `plugins/`，重新啟動伺服器。
-- 選用相依（softdepend）：zero。zero 的 `sign` 模組仍啟用時，本插件不接管事件。
-- 使用共用套件 tokaStorage 與 tokaI18n，皆已內嵌於 JAR；登記資料放在 `plugins/tokaSigns/storage/<格式>/`，預設 SQLite，改設定不會自動搬移資料。
-- 傳送、交易等功能牌由對應插件透過 API（Policy、Action、Definition）提供。
+- **複製貼上**：複製一般告示牌的四行文字，貼到其他告示牌上。
+- **編輯牌面**：點選告示牌後用表單修改；一般牌改四行文字，功能牌改代碼。
+- **功能牌**：在告示牌上寫入類型與代碼，玩家點一下就能執行，例如傳送到區域、前往公共傳送點、購買或回收商品、開啟物品管理、顯示伺服器狀態。實際動作由對應插件提供。
+- **維護檢查**：分批檢查或重繪全服告示牌，依伺服器負載自動調整速度，不會造成卡頓。
 
-## 指令與權限
+## 玩家怎麼用
 
-| 指令 | 用途 | 權限（預設） |
-| --- | --- | --- |
-| `/sign help`、`/sign cancel` | 說明、取消待選取操作 | `tokaSigns.help`、`tokaSigns.cancel`（所有人） |
-| `/sign status` | 查看登記數與 provider 狀態 | `tokaSigns.status`（OP） |
-| `/sign edit` | 點選告示牌後編輯（一般牌四行、功能牌代碼） | `tokaSigns.edit` |
-| `/sign copy`、`/sign paste` | 複製貼上一般告示牌文字 | `tokaSigns.copy`、`tokaSigns.paste` |
-| `/sign set <類型> <代碼>`（或 `set buy｜sell <商品代碼>`） | 建立或修改功能牌 | `tokaSigns.set` 及 `tokaSigns.type.<ID>` |
-| `/sign inspect <ID> [--force]` | 檢查單一告示牌 | `tokaSigns.inspect` |
-| `/sign check｜refresh <ID｜all> [--force]` | 排入唯讀檢查／重繪牌面 | `tokaSigns.check`、`tokaSigns.refresh` |
-| `/sign jobs [cancel]` | 維護工作進度／取消 | `tokaSigns.jobs`、`tokaSigns.jobs.cancel` |
+玩家直接點擊功能牌即可，沒有需要輸入的指令。`/sign help` 可查看說明。
 
-`--force` 另需 `tokaSigns.force`；`tokaSigns.break` 控制破壞功能牌；`tokaSigns.admin` 視為擁有全部權限（OP）。未標示者預設 OP。也可直接在告示牌填四行建立功能牌，格式見 `/sign help`。
+## 管理員怎麼用
 
-## 設定（`config.yml`）
+| 指令 | 用法 | 說明 | 權限 |
+| --- | --- | --- | --- |
+| `/sign help` | `/sign help` | 顯示說明 | `tokaSigns.help`（所有人） |
+| `/sign cancel` | `/sign cancel` | 取消操作，保留剪貼簿 | `tokaSigns.cancel`（所有人） |
+| `/sign status` | `/sign status` | 登記數、事件接管與保護服務狀態 | `tokaSigns.status` |
+| `/sign edit` | `/sign edit` | 點選告示牌後編輯 | `tokaSigns.edit` |
+| `/sign copy` | `/sign copy` | 點選一般告示牌複製文字 | `tokaSigns.copy` |
+| `/sign paste` | `/sign paste` | 點選一般告示牌貼上文字 | `tokaSigns.paste` |
+| `/sign set` | `/sign set <類型名稱或ID> <代碼>` | 點選告示牌設為功能牌；代碼不可含空白，狀態牌填 `-` | `tokaSigns.set` 及 `tokaSigns.type.<ID>` |
+| `/sign inspect` | `/sign inspect <ID> [--force]` | 對照單一告示牌的位置、牌面與功能設定 | `tokaSigns.inspect` |
+| `/sign check` | `/sign check <ID｜all> [--force]` | 分批唯讀檢查 | `tokaSigns.check` |
+| `/sign refresh` | `/sign refresh <ID｜all> [--force]` | 分批依設定更新牌面 | `tokaSigns.refresh` |
+| `/sign jobs` | `/sign jobs [cancel]` | 查看維護進度／取消後續處理 | `tokaSigns.jobs`、`tokaSigns.jobs.cancel` |
+
+除標示「所有人」者，權限預設皆為 OP；`tokaSigns.admin` 視為擁有全部權限。`--force` 會載入既有區塊，另需 `tokaSigns.force`；破壞功能牌需 `tokaSigns.break`。
+
+也可以直接在告示牌上寫四行建立功能牌（外框與 `|` 不用輸入，「留空」就不填字）：
+
+（圖：寫好四行的功能告示牌範例）
+
+| 第 1 行 | 第 2 行 | 類型 | 權限 |
+| --- | --- | --- | --- |
+| `tpr` | 區域代碼 | 區域傳送 | `tokaSigns.type.10` |
+| `tpp` | 傳送點名稱 | 公共傳送點 | `tokaSigns.type.11` |
+| `b` | 商品代碼 | 購買商品 | `tokaSigns.type.31` |
+| `s` | 商品代碼 | 回收商品 | `tokaSigns.type.32` |
+| `item` | 留空 | 物品管理入口 | `tokaSigns.type.33` |
+| `status` | 留空 | 伺服器狀態 | `tokaSigns.type.41` |
+
+## 常用設定（`config.yml`，修改後需重新啟動伺服器）
 
 | key | 預設 | 說明 |
 | --- | --- | --- |
-| `language` | `zh-TW` | 語言 |
-| `storage.backend` | `sqlite` | `sqlite`、`json`、`yaml` |
-| `actions.enabled` | `true` | 是否接管告示牌事件 |
-| `maintenance.normal.max-records` / `budget-ms` / `min-tps` | `32` / `2` / `17` | 一般維護每 tick 上限與 TPS 下限 |
-| `maintenance.force.max-records` / `budget-ms` / `min-tps` | `2` / `1` / `18` | `--force` 維護的上限 |
+| `actions.enabled` | `true` | 是否由本插件接管告示牌的點擊、建立、編輯與破壞；zero 的 sign 模組仍啟用時不會接管 |
+| `maintenance.normal.max-records` | `32` | 一般維護每 tick 最多處理幾筆（1–128） |
+| `maintenance.normal.budget-ms` | `2` | 一般維護每 tick 最多花費毫秒 |
+| `maintenance.normal.min-tps` | `17` | TPS 低於此值就暫停維護 |
+| `maintenance.force.max-records` / `budget-ms` / `min-tps` | `2` / `1` / `18` | `--force` 維護的對應上限，因為要載入區塊所以較保守 |
 
-維護預設不載入世界或區塊；`--force` 只載入既有區塊。
+## 給其他插件的串接
 
-## 版本紀錄
+其他插件於啟用後呼叫 `dev.toka.signs.Main` 的靜態方法，提供功能牌的實際動作。
 
-- 0.4.1：文件整理。
-- 0.4.0：所有玩家可見文字移入 tokaI18n `zh-TW` 語系檔。
-- 0.3.0：新增 `inspect`、`check`、`refresh`、`jobs` 維護指令，依 TPS 自動調整處理量。
-- 0.2.3：可直接填寫四行建立功能牌。
-- 0.2.2：指令與功能牌類型依權限顯示與執行。
+| 方法 | 參數 | 用途 |
+| --- | --- | --- |
+| `registerPolicy` / `unregisterPolicy` | 擁有者名稱、`Policy` | 提供保護判斷（允許、拒絕、尚未就緒），沒有 Policy 時功能牌動作會被拒絕 |
+| `registerAction` / `unregisterAction` | 類型 ID、`Action` | 提供該類型功能牌被點擊時的動作 |
+| `registerDefinition` / `unregisterDefinition` | 類型 ID、`Definition` | 提供該類型建立／編輯時的牌面內容 |
+| `serviceReady` | 無 | 確認本插件已就緒 |
+| `isActionsEnabled` | 無 | 目前是否由本插件接管事件 |
 
-授權：MIT。
+## 常見問題
+
+- **功能牌點了沒反應？** 用 `/sign status` 確認事件接管為是、保護服務已就緒，且該類型的插件已啟用。
+- **看不到某個類型可以設定？** 需要該類型的 `tokaSigns.type.<ID>` 權限，且提供該類型的插件已就緒。
+
+目前版本 0.4.1

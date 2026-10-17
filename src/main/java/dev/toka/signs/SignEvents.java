@@ -41,10 +41,11 @@ public final class SignEvents implements Listener {
     }
     private void applyDefinition(Player p,Block b,BlockEntitySign sign,int type,String code)throws Exception{
         if(!main.canDefine(p,type)){p.sendMessage(Main.tr("err.cannotDefine"));return;}
+        if(code==null||code.length()>8192){p.sendMessage(Main.tr("err.input.badFormat"));return;}
         var old=record(b);var r=new SignRegistry.SignRecord(old==null?main.getRegistry().nextId():old.id(),b.getFloorX(),b.getFloorY(),b.getFloorZ(),b.getLevel().getFolderName(),type,code,old==null?null:old.info(),old==null?-1:old.ticks());
         if(!main.allowed(p,old==null?r:old,old==null?"create":"edit")||!main.allowed(p,r,old==null?"create":"edit")){p.sendMessage(Main.tr("err.noSetHere"));return;}
         String[] text=main.prepare(p,r,new String[]{"",code,"",""});if(text==null||text.length!=4){p.sendMessage(Main.tr("err.providerNotReady"));return;}
-        var event=new SignChangeEvent(b,p,text);prepared.add(event);try{main.getServer().getPluginManager().callEvent(event);}finally{prepared.remove(event);}if(event.isCancelled())return;
+        var event=new SignChangeEvent(b,p,text);firePrepared(main,event);if(event.isCancelled())return;
         main.getRegistry().upsert(r);sign.setText(event.getLines());p.sendMessage(Main.tr("msg.setDone"));
     }
     @EventHandler public void form(PlayerFormRespondedEvent event){

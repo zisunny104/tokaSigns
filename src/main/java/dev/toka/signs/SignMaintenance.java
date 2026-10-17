@@ -14,6 +14,7 @@ final class SignMaintenance {
     private long sequence;
     private final MaintenanceBudget pacing=new MaintenanceBudget();
     private boolean waiting;
+    private static final Gson GSON=new Gson();
     private static final class Job {
         boolean force; long id; String mode,state="RUNNING"; int total,done,changed; CommandSender owner;
         Iterator<SignRegistry.SignRecord> records;
@@ -42,13 +43,13 @@ final class SignMaintenance {
         var block=world.getBlock(r.x(),r.y(),r.z());out.addProperty("block",block.getName());
         var entity=world.getBlockEntity(pos);
         if(!(entity instanceof BlockEntitySign sign))return result(out,"SIGN_ENTITY_MISSING");
-        String[] before=sign.getText().clone();out.add("actualText",new Gson().toJsonTree(before));
+        String[] before=sign.getText().clone();out.add("actualText",GSON.toJsonTree(before));
         if(!main.hasDefinition(r.type()))return result(out,"DEFINITION_UNAVAILABLE");
         Player player=actor instanceof Player p?p:null;
         try {
             String[] expected=main.prepare(player,r,new String[]{"",r.code()==null?"":r.code(),"",""});
             if(expected==null||expected.length!=4||Arrays.stream(expected).anyMatch(Objects::isNull))return result(out,"REFERENCE_UNAVAILABLE");
-            out.add("expectedText",new Gson().toJsonTree(expected));
+            out.add("expectedText",GSON.toJsonTree(expected));
             if(Arrays.equals(before,expected))return result(out,"MATCH");
             if(!refresh)return result(out,"TEXT_DIFFERS");
             if(!Main.permits(actor,"type."+r.type())||!main.hasPolicy())return result(out,"DENIED");
@@ -62,7 +63,7 @@ final class SignMaintenance {
             }
             if(!Objects.equals(Main.getRegistry().byId(id).orElse(null),r)||world.getBlockEntity(pos)!=sign||!Arrays.equals(before,sign.getText()))return result(out,"CHANGED_DURING_CHECK");
             sign.setText(expected);
-            out.add("afterText",new Gson().toJsonTree(sign.getText()));
+            out.add("afterText",GSON.toJsonTree(sign.getText()));
             return result(out,Arrays.equals(expected,sign.getText())?"UPDATED":"UPDATE_REJECTED");
         }catch(Exception|LinkageError error){out.addProperty("error",error.getClass().getSimpleName());return result(out,"PROVIDER_ERROR");}
     }
@@ -106,7 +107,7 @@ final class SignMaintenance {
         var out=new JsonObject();if(job==null){out.addProperty("state","IDLE");return out.toString();}
         out.addProperty("waitingForPerformance",waiting&&job.state.equals("RUNNING"));out.addProperty("force",job.force);out.addProperty("jobId",job.id);out.addProperty("mode",job.mode);out.addProperty("state",job.state);
         out.addProperty("processed",job.done);out.addProperty("total",job.total);out.addProperty("updated",job.changed);
-        out.add("counts",new Gson().toJsonTree(job.counts));out.add("samples",job.samples.deepCopy());out.addProperty("sampleLimit",20);return out.toString();
+        out.add("counts",GSON.toJsonTree(job.counts));out.add("samples",job.samples.deepCopy());out.addProperty("sampleLimit",20);return out.toString();
     }
     boolean cancel(){if(job==null||!job.state.equals("RUNNING"))return false;finish("CANCELLED");return true;}
     void close(){if(job!=null){job.state="CANCELLED";job.records=Collections.emptyIterator();}job=null;}

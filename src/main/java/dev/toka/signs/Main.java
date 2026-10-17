@@ -16,6 +16,7 @@ public final class Main extends PluginBase {
     private SignRegistry registry;
     private SignMaintenance maintenance;
     private Messages messages;
+    private java.lang.reflect.Method zeroModuleCheck;
     private Policy policy;
     private String policyOwner;
     private final Map<Integer,Action> actions=new HashMap<>();
@@ -60,7 +61,10 @@ public final class Main extends PluginBase {
     boolean ownsEvents(){
         if(!getConfig().getBoolean("actions.enabled",true))return false;
         var zero=getServer().getPluginManager().getPlugin("zero");
-        if(zero!=null&&zero.isEnabled())try{if((Boolean)zero.getClass().getMethod("isModuleActive",String.class).invoke(zero,"sign"))return false;}catch(Exception|LinkageError error){return false;}
+        if(zero!=null&&zero.isEnabled())try{
+            if(zeroModuleCheck==null)zeroModuleCheck=zero.getClass().getMethod("isModuleActive",String.class);
+            if((Boolean)zeroModuleCheck.invoke(zero,"sign"))return false;
+        }catch(Exception|LinkageError error){return false;}
         return true;
     }
     boolean allowed(Player p,SignRegistry.SignRecord sign,String operation){
@@ -139,7 +143,8 @@ public final class Main extends PluginBase {
     private String[] statusLines(){return new String[]{messages.text("ui.statusSign.title"),messages.text("ui.statusSign.tps",String.format(Locale.ROOT,"%.1f",getServer().getTicksPerSecond())),messages.text("ui.statusSign.load",String.format(Locale.ROOT,"%.1f",getServer().getTickUsage())),messages.text("ui.statusSign.net",String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getUpload()),String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getDownload()))};}
     private void updateStatusSigns(){
         if(!ownsEvents())return;
-        for(var r:registry.records())if(r.type()==41){
+        for(var it=registry.maintenanceIterator();it.hasNext();){
+            var r=it.next();if(r.type()!=41)continue;
             var world=getServer().getLevelByName(r.world());
             if(world==null||!world.isChunkLoaded(r.x()>>4,r.z()>>4))continue;
             var entity=world.getBlockEntity(new cn.nukkit.math.Vector3(r.x(),r.y(),r.z()));

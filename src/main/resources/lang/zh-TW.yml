@@ -15,10 +15,6 @@
 # ───────────────────────── 指令說明與用法（cmd） ─────────────────────────
 cmd:
   sign:
-    # 指令簡述（與 plugin.yml 的 description 一致）
-    desc: "告示牌管理與複製貼上"
-    # 總用法
-    usage: "/sign <help|status|edit|copy|paste|set|cancel|inspect|check|refresh|jobs> [參數]"
     # /sign set 的用法
     usageSet: "/sign set <類型名稱或正整數ID> <單一代碼>（狀態牌填 -）"
     # /sign set 在 SignEvents 內的簡短用法（沿用原文字）

@@ -102,7 +102,7 @@ public final class Main extends PluginBase {
         }
         if(permits(sender,"set")){
             sender.sendMessage("§b── 直接填寫告示牌：§6[ §f第1行 | 第2行 | 第3行 | 第4行§6 ] ──");
-            sender.sendMessage("[告示]金色外框代表整面告示牌；<參數> 必填，[參數] 選填。外框、標記及 | 不用輸入，「留空」不填字。");
+            sender.sendMessage("[告示]<參數> 必填，[參數] 選填。外框、標記及 | 不用輸入，「留空」不填字。");
             signInputHelp(sender,10,"tpr | <區域代碼> | 留空 | 留空 — 區域傳送");
             signInputHelp(sender,11,"tpp | <傳送點名稱> | 留空 | 留空 — 公共傳送點");
             signInputHelp(sender,31,"b | <商品代碼> | 留空 | 留空 — 購買商品");

@@ -26,9 +26,11 @@ public final class SignEvents implements Listener {
     static void setDefinitionMode(Player p,String type,String code){
         Integer n=TYPES.get(type.toLowerCase(Locale.ROOT));if(type.equalsIgnoreCase("buy"))n=31;if(type.equalsIgnoreCase("sell"))n=32;
         if(n==null)try{n=Integer.parseInt(type);}catch(NumberFormatException ignored){}
-        if(n==null||code.isBlank()||code.length()>8192){p.sendMessage("[告示]用法：/sign set buy|sell|type 商品代碼");return;}
+        if(n==null||n<=0||code.isBlank()||code.length()>8192){p.sendMessage("[告示]用法：/sign set buy|sell|type 商品代碼");return;}
+        if(!mainInstanceCanDefine(p,n)){p.sendMessage("[告示]類型沒有授權或 provider 尚未就緒。");return;}
         setups.put(p.getUniqueId(),new Setup(n,code));setMode(p,"set");
     }
+    private static boolean mainInstanceCanDefine(Player p,int type){return ((Main)p.getServer().getPluginManager().getPlugin("tokaSigns")).canDefine(p,type);}
     private void openEdit(Player p,Block b,BlockEntitySign sign,SignRegistry.SignRecord r){
         if(!main.allowed(p,r==null?plain(b):r,"edit")){p.sendMessage("[告示]沒有此位置的編輯權限。");return;}
         var form=new cn.nukkit.form.window.FormWindowCustom("告示牌編輯");String[] text=sign.getText().clone();
@@ -37,6 +39,7 @@ public final class SignEvents implements Listener {
         edits.put(p.getUniqueId(),new Pending(r==null?b.getLevel().getFolderName():r.world(),b.getFloorX(),b.getFloorY(),b.getFloorZ(),form,text,r));p.showFormWindow(form);
     }
     private void applyDefinition(Player p,Block b,BlockEntitySign sign,int type,String code)throws Exception{
+        if(!main.canDefine(p,type)){p.sendMessage("[告示]功能類型無法設定。");return;}
         var old=record(b);var r=new SignRegistry.SignRecord(old==null?main.getRegistry().nextId():old.id(),b.getFloorX(),b.getFloorY(),b.getFloorZ(),b.getLevel().getFolderName(),type,code,old==null?null:old.info(),old==null?-1:old.ticks());
         if(!main.allowed(p,old==null?r:old,old==null?"create":"edit")||!main.allowed(p,r,old==null?"create":"edit")){p.sendMessage("[告示]沒有此位置的設定權限。");return;}
         String[] text=main.prepare(p,r,new String[]{"",code,"",""});if(text==null||text.length!=4){p.sendMessage("[告示]此功能的 provider 尚未就緒。");return;}
@@ -45,7 +48,7 @@ public final class SignEvents implements Listener {
     }
     @EventHandler public void form(PlayerFormRespondedEvent event){
         Player p=event.getPlayer();Pending pending=edits.get(p.getUniqueId());if(pending==null||event.getWindow()!=pending.form())return;edits.remove(p.getUniqueId());
-        if(event.wasClosed()||!main.ownsEvents()||!p.hasPermission("tokaSigns.admin")||!(event.getResponse() instanceof cn.nukkit.form.response.FormResponseCustom response))return;
+        if(event.wasClosed()||!main.ownsEvents()||!Main.permits(p,"edit")||!(event.getResponse() instanceof cn.nukkit.form.response.FormResponseCustom response))return;
         var world=main.getServer().getLevelByName(pending.world());if(world==null||world!=p.getLevel()||!world.isChunkLoaded(pending.x()>>4,pending.z()>>4))return;
         var b=world.getBlock(pending.x(),pending.y(),pending.z());if(p.distance(b)>8)return;
         var entity=world.getBlockEntity(b);if(!(entity instanceof BlockEntitySign sign)||!Arrays.equals(sign.getText(),pending.text())||!Objects.equals(record(b),pending.record())){p.sendMessage("[告示]告示牌已變更，請重新開啟。");return;}
@@ -67,7 +70,7 @@ public final class SignEvents implements Listener {
         if(!(entity instanceof BlockEntitySign sign)){if(r!=null){event.setCancelled();p.sendMessage("[告示]告示牌資料尚未就緒，請稍後再試。");}return;}
         if(mode!=null){
             event.setCancelled();
-            if(!p.hasPermission("tokaSigns.admin")){modes.remove(p.getUniqueId());setups.remove(p.getUniqueId());return;}
+            if(!Main.permits(p,mode.equals("set")?"set":mode)){modes.remove(p.getUniqueId());setups.remove(p.getUniqueId());return;}
             if(mode.equals("edit")){modes.remove(p.getUniqueId());openEdit(p,b,sign,r);return;}
             if(mode.equals("set")){modes.remove(p.getUniqueId());var setup=setups.remove(p.getUniqueId());if(setup!=null)try{applyDefinition(p,b,sign,setup.type(),setup.code());}catch(Exception|LinkageError error){main.getLogger().warning("告示牌功能設定失敗："+error.getClass().getSimpleName());}return;}
             // Plain text must never be pasted onto managed signs to alter business presentation.
@@ -84,7 +87,7 @@ public final class SignEvents implements Listener {
         var old=record(event.getBlock());Integer type=TYPES.get(event.getLine(0).toLowerCase(Locale.ROOT));
         if(old==null&&type==null)return;
         var b=event.getBlock();var r=old==null?new SignRegistry.SignRecord(main.getRegistry().nextId(),b.getFloorX(),b.getFloorY(),b.getFloorZ(),b.getLevel().getFolderName(),type,event.getLine(1),null,-1):old;
-        if(!event.getPlayer().hasPermission("tokaSigns.admin")||!main.allowed(event.getPlayer(),r,old==null?"create":"edit")){event.setCancelled();return;}
+        if(!main.canDefine(event.getPlayer(),r.type())||!main.allowed(event.getPlayer(),r,old==null?"create":"edit")){event.setCancelled();return;}
         // Managed edits go through providers; never silently convert a business sign to plain text.
         try{String[] lines=main.prepare(event.getPlayer(),r,event.getLines().clone());if(lines==null||lines.length!=4){event.setCancelled();return;}main.getRegistry().upsert(r);for(int i=0;i<4;i++)event.setLine(i,lines[i]);}
         catch(Exception|LinkageError error){event.setCancelled();main.getLogger().warning("告示牌更新失敗："+error.getClass().getSimpleName());}

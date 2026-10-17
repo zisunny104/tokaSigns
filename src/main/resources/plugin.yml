@@ -1,6 +1,6 @@
 name: tokaSigns
 main: dev.toka.signs.Main
-version: "0.2.1"
+version: "0.2.2"
 api: ["1.0.4"]
 author: zisunny104
 softdepend: [zero]
@@ -8,9 +8,43 @@ commands:
   sign:
     aliases: [signs]
     description: 告示牌管理與複製貼上
-    permission: tokaSigns.admin
 permissions:
   tokaSigns.admin:
     default: op
 
 
+
+  tokaSigns.help:
+    default: true
+  tokaSigns.cancel:
+    default: true
+  tokaSigns.status:
+    default: op
+  tokaSigns.edit:
+    default: op
+  tokaSigns.copy:
+    default: op
+  tokaSigns.paste:
+    default: op
+  tokaSigns.set:
+    default: op
+  tokaSigns.break:
+    default: op
+  tokaSigns.type.10:
+    default: op
+  tokaSigns.type.11:
+    default: op
+  tokaSigns.type.12:
+    default: op
+  tokaSigns.type.13:
+    default: op
+  tokaSigns.type.21:
+    default: op
+  tokaSigns.type.31:
+    default: op
+  tokaSigns.type.32:
+    default: op
+  tokaSigns.type.33:
+    default: op
+  tokaSigns.type.41:
+    default: op

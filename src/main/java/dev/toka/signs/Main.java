@@ -58,6 +58,7 @@ public final class Main extends PluginBase {
         return true;
     }
     boolean allowed(Player p,SignRegistry.SignRecord sign,String operation){
+        if(!operation.equals("activate")&&!permits(p,operation.equals("create")?"set":operation))return false;
         try{return policy!=null&&policy.authorize(p,sign,operation)==Decision.ALLOW;}
         catch(Exception|LinkageError error){getLogger().warning("告示牌權限服務失敗，已拒絕此次操作："+error.getClass().getSimpleName());return false;}
     }
@@ -66,39 +67,40 @@ public final class Main extends PluginBase {
         Main m=service();if(!m.ownsEvents()||!m.allowed(player,sign,"activate"))return false;
         Action a=m.actions.get(sign.type());return a!=null&&a.execute(player,sign);
     }
+    static boolean permits(CommandSender sender,String operation){return sender.hasPermission("tokaSigns.admin")||sender.hasPermission("tokaSigns."+operation);}
+    boolean canDefine(Player p,int type){return permits(p,"type."+type)&&definitions.containsKey(type);}
     public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
-        if(!sender.hasPermission("tokaSigns.admin")){sender.sendMessage("[告示]需要 tokaSigns.admin 權限（預設 OP）。");return true;}
-        if(args.length==0||args[0].equalsIgnoreCase("help")){sendHelp(sender);return true;}
-        if(args.length==1&&args[0].equalsIgnoreCase("status")){
-            sender.sendMessage("[告示]登記 "+registry.records().size()+" 筆；事件接管="+ownsEvents()+"；動作開關="+getConfig().getBoolean("actions.enabled",true)+"；保護 provider="+(policyOwner==null?"未就緒":policyOwner));
-            sender.sendMessage("[告示]動作類型："+new TreeSet<>(actions.keySet())+"；設定類型："+new TreeSet<>(definitions.keySet()));return true;
+        String op=args.length==0?"help":args[0].toLowerCase(Locale.ROOT);
+        if(!Set.of("help","status","edit","copy","paste","set","cancel").contains(op)){sender.sendMessage("[告示]未知指令，請使用 /sign help。");return true;}
+        if(!permits(sender,op)){sender.sendMessage("[告示]沒有此指令的權限。");return true;}
+        if(!op.equals("set")&&args.length>1){sender.sendMessage("[告示]此指令不接受其他參數。");return true;}
+        if(op.equals("help")){sendHelp(sender);return true;}
+        if(op.equals("status")){sender.sendMessage("[告示]登記 "+registry.records().size()+" 筆；事件接管="+ownsEvents()+"；保護 provider="+(policyOwner==null?"未就緒":policyOwner));return true;}
+        if(!(sender instanceof Player p)){sender.sendMessage("[告示]此指令限遊戲內玩家使用。");return true;}
+        if(op.equals("cancel")){SignEvents.cancel(p);sender.sendMessage("[告示]已取消操作，保留剪貼簿。");return true;}
+        if(!ownsEvents()){sender.sendMessage("[告示]事件接管尚未啟用，請以 /sign status 查看。");return true;}
+        if(op.equals("set")){
+            if(args.length!=3){sender.sendMessage("[告示]用法：/sign set <類型名稱或正整數ID> <單一代碼>（狀態牌填 -）");return true;}
+            SignEvents.setDefinitionMode(p,args[1],args[2]);return true;
         }
-        if(args.length==1&&args[0].equalsIgnoreCase("cancel")){
-            if(sender instanceof Player p){SignEvents.cancel(p);sender.sendMessage("[告示]已取消待選取與待提交操作。");}else sender.sendMessage("[告示]此操作限遊戲內玩家使用。");return true;
-        }
-        if(!(sender instanceof Player)){sender.sendMessage("[告示]編輯、複製、貼上與設定限遊戲內玩家使用。");sendHelp(sender);return true;}
-        if(args.length==1&&(args[0].equalsIgnoreCase("copy")||args[0].equalsIgnoreCase("paste"))&&sender instanceof Player p){
-            if(!ownsEvents()){sender.sendMessage("[告示]舊告示牌模組仍在管理中。");return true;}
-            SignEvents.setMode(p,args[0].toLowerCase(Locale.ROOT));return true;
-        }
-        if(sender instanceof Player p&&args.length==1&&args[0].equalsIgnoreCase("edit")){
-            if(ownsEvents())SignEvents.setMode(p,"edit");else sender.sendMessage("[告示]舊告示牌模組仍在管理中。");return true;
-        }
-        if(sender instanceof Player p&&args.length>=3&&args[0].equalsIgnoreCase("set")){
-            if(ownsEvents())SignEvents.setDefinitionMode(p,args[1],String.join(" ",Arrays.copyOfRange(args,2,args.length)));else sender.sendMessage("[告示]舊告示牌模組仍在管理中。");return true;
-        }
-        sender.sendMessage("[告示]未知指令或參數不正確。");sendHelp(sender);return true;
+        SignEvents.setMode(p,op);return true;
     }
     private void sendHelp(CommandSender sender){
-        sender.sendMessage("§b── tokaSigns 指令說明 ──");
-        sender.sendMessage("/sign help — 顯示說明（別名 /signs）");
-        sender.sendMessage("/sign status — 登記數、接管狀態與 provider（後台可用）");
-        sender.sendMessage("/sign edit — 點選一般牌編輯四行；功能牌編輯代碼");
-        sender.sendMessage("/sign copy、/sign paste — 點選一般牌複製／貼上文字");
-        sender.sendMessage("/sign set <類型> <代碼> — 點選牌設定功能；buy/b=31、sell/s=32、tpr=10、tpp=11、item=33、status=41");
-        sender.sendMessage("/sign cancel — 取消待選取／表單操作，保留剪貼簿");
-        sender.sendMessage("[告示]需要 tokaSigns.admin（預設 OP）及位置保護授權；功能須 provider 就緒。tpl/tps/pay 缺 provider 時不建立。");
-        sender.sendMessage("[告示]缺少或損壞的方塊實體不會自動重建，請保留世界備份。");
+        sender.sendMessage("§b── tokaSigns 可用指令（別名 /signs）──");
+        if(permits(sender,"help"))sender.sendMessage("/sign help — 此說明");
+        if(permits(sender,"status"))sender.sendMessage("/sign status — 登記數、接管及保護 provider");
+        if(sender instanceof Player){
+            if(permits(sender,"edit"))sender.sendMessage("/sign edit — 點選一般牌改四行；功能牌改代碼");
+            if(permits(sender,"copy"))sender.sendMessage("/sign copy — 點選一般牌複製文字");
+            if(permits(sender,"paste"))sender.sendMessage("/sign paste — 點選一般牌貼上文字");
+            if(permits(sender,"cancel"))sender.sendMessage("/sign cancel — 取消操作，保留剪貼簿");
+            if(permits(sender,"set")){
+                sender.sendMessage("/sign set <類型名稱或正整數ID> <單一代碼> — 點選設定功能；代碼不可含空白，狀態牌填 -");
+                var types=new TreeSet<Integer>();for(int type:definitions.keySet())if(permits(sender,"type."+type))types.add(type);
+                sender.sendMessage("[告示]目前有設定權限且 provider 已就緒的類型："+types+"（可直接填數字ID）");
+            }
+        }
+        sender.sendMessage("[告示]顯示指令權限不代表任何位置都可修改；仍檢查保護服務、功能 provider 與接管狀態。");
     }
     private String[] statusLines(){return new String[]{"§r§a⦋狀態⦌§r","TPS "+String.format(Locale.ROOT,"%.1f",getServer().getTicksPerSecond()),"載入 "+String.format(Locale.ROOT,"%.1f%%",getServer().getTickUsage()),"↑ "+String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getUpload())+" ↓ "+String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getDownload())};}
     private void updateStatusSigns(){

@@ -103,4 +103,4 @@ Definition.prepare 必須是無交易副作用的文字產生／引用檢查，�
 
 ## 多語系（0.4.0）
 
-所有玩家看得到的文字（訊息、指令用法與 help、後台 log、表單、狀態牌牌面）集中在 `src/main/resources/lang/zh-TW.yml`，由內嵌的 tokaI18n 讀取；`config.yml` 的 `language` 決定語言（目前只有 `zh-TW`）。伺服器擁有者可把同名檔放到 `plugins/tokaSigns/lang/` 覆蓋個別文字，沒寫到的 key 仍用內建。`/sign help` 依權限顯示各子指令說明。key 清單與待確認事項見 [docs/I18N.md](docs/I18N.md)。
+所有玩家看得到的文字（訊息、指令用法與 help、後台 log、表單、狀態牌牌面）集中在 `src/main/resources/lang/zh-TW.yml`，由內嵌的 tokaI18n 讀取；`config.yml` 的 `language` 決定語言（目前只有 `zh-TW`）。伺服器擁有者可把同名檔放到 `plugins/tokaSigns/lang/` 覆蓋個別文字，沒寫到的 key 仍用內建。`/sign help` 依權限顯示各子指令說明。。共用的多語系原則見[拆分主文件](https://github.com/zisunny104/zero/blob/master/docs/ARCHITECTURE.md)。

@@ -1,15 +1,16 @@
 param([string]$Maven='mvn',[string]$Repository=(Join-Path (Split-Path $PSScriptRoot -Parent) 'plugin-modernization/build/m2'))
 $ErrorActionPreference='Stop'
 Push-Location $PSScriptRoot
+$pom = [xml](Get-Content -Raw (Join-Path $PSScriptRoot 'pom.xml')); $n = $pom.project.artifactId; $v = $pom.project.version
 try {
  & $Maven "-Dmaven.repo.local=$Repository" package
  if($LASTEXITCODE -ne 0){throw '編譯或測試失敗'}
  New-Item -ItemType Directory -Force output | Out-Null
- Copy-Item target/tokaSigns-0.4.1.jar output -Force
+ Copy-Item target/$n-$v.jar output -Force
  $shared=Join-Path (Split-Path $PSScriptRoot -Parent) 'plugin-modernization/output'
  New-Item -ItemType Directory -Force $shared | Out-Null
- Copy-Item output/tokaSigns-0.4.1.jar $shared -Force
- Get-FileHash output/tokaSigns-0.4.1.jar
+ Copy-Item output/$n-$v.jar $shared -Force
+ Get-FileHash output/$n-$v.jar
 } finally {Pop-Location}
 
 

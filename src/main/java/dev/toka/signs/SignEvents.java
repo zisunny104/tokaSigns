@@ -11,7 +11,7 @@ import java.util.*;
 /** Event ownership is independent from business providers; unavailable policy fails closed. */
 public final class SignEvents implements Listener {
     private final Main main;
-    private final Set<SignChangeEvent> prepared=Collections.newSetFromMap(new IdentityHashMap<>());
+    private static final Set<SignChangeEvent> prepared=Collections.newSetFromMap(new IdentityHashMap<>());
     private static final Map<UUID,String> modes=new HashMap<>();
     private record Pending(String world,int x,int y,int z,cn.nukkit.form.window.FormWindowCustom form,String[] text,SignRegistry.SignRecord record){}
     private record Setup(int type,String code){}
@@ -21,6 +21,7 @@ public final class SignEvents implements Listener {
     private static final Map<String,Integer> TYPES=Map.of("tpr",10,"tpp",11,"tpl",12,"tps",13,"pay",21,"b",31,"s",32,"item",33,"status",41);
     SignEvents(Main main){this.main=main;}
     static void setMode(Player p,String mode){if(mode.equals("paste")&&!clips.containsKey(p.getUniqueId())){p.sendMessage("[告示]請先複製告示牌。");return;}modes.put(p.getUniqueId(),mode);p.sendMessage("[告示]請點選告示牌進行"+switch(mode){case "copy"->"複製";case "paste"->"貼上";case "edit"->"編輯";default->"功能設定";});}
+    static void firePrepared(Main main,SignChangeEvent event){prepared.add(event);try{main.getServer().getPluginManager().callEvent(event);}finally{prepared.remove(event);}}
     static void cancel(Player p){modes.remove(p.getUniqueId());edits.remove(p.getUniqueId());setups.remove(p.getUniqueId());}
     static void clear(){modes.clear();clips.clear();edits.clear();setups.clear();}
     static void setDefinitionMode(Player p,String type,String code){

@@ -76,3 +76,27 @@ help 與執行使用相同節點：`tokaSigns.help`、`status`、`edit`、`copy`
 - `status | 留空 | 留空 | 留空`
 
 help 將指令與告示牌輸入分區，依 set／type 權限及 Definition 註冊狀態列出格式。儲存後 provider 產生外觀與功能。第 3、4 行必須留空，避免默默丟棄文字；item/status 第 2 行也留空，其餘需有效代碼。功能牌已有記錄時用 `/sign edit` 編輯代碼。缺少權限、保護或 provider 時取消；Definition 已註冊不保證外部業務資料可用，提交仍會驗證。
+
+## 維護指令與 API（0.3.0）
+
+- `/sign inspect <ID> [--force]`：單牌登記、位置、實際文字、預期文字及差異狀態。
+- `/sign check <ID|all> [--force]`：排入唯讀檢查。
+- `/sign refresh <ID|all> [--force]`：排入依既有設定重繪牌面，不改業務資料、不重建 NBT。
+- `/sign jobs [cancel]`：進度、狀態分類及最多 20 筆問題／更新樣本，或停止後續工作；取消不回復已更新的牌面。
+
+權限分別為 `tokaSigns.inspect/check/refresh/jobs/jobs.cancel`（完整名稱皆以 tokaSigns. 為前綴），預設 OP；`--force` 另需 `tokaSigns.force`。help 顯示相同能力；管理節點 admin 保留全權。玩家 refresh 另查 edit、功能 type 與位置保護；每筆重新檢查，玩家離線或工作權限撤銷則取消。後台 refresh 是明確的管理操作，沒有玩家位置可交由保護事件判斷，請謹慎授權。
+
+維護預設不載入世界／區塊；force 只載入既有區塊，不生成，處理後提出安全卸載請求（實際卸載由核心決定）。未掛載世界仍跳過，未知功能、無 Definition、引用失效、無方塊實體都只回報，refresh 不建立空白告示牌。比對成功不代表所有交易或傳送已完成實機驗收。
+
+每個 tick 依 TPS、tick 使用率及各模式近期每筆耗時（分別估算）調整數量；低於 min-tps 或使用率達 95% 暫停，工作狀態含 waitingForPerformance。`maintenance.normal`／`maintenance.force` 各有 budget-ms、max-records、min-tps；max-records 是安全上限，非固定批量。現有設定檔缺項時沿用預設，不自動覆蓋設定。
+
+世界讀寫僅在主執行緒，不把核心 API 移到背景執行緒。每筆可能呼叫 provider，force 可能同步磁碟載入；時間預算是軟限制，無法中途切斷單次呼叫。此版本不寫磁碟報告，結果只留最近一個工作、分類計數與最多 20 筆樣本；新工作會取代舊結果，重要結果請透過 API 保存。批次遍歷 immutable 索引快照，不在每 tick 複製或掃描全登記資料；快照後新建的牌面留待下一次工作。
+
+公開 API（主執行緒，actor 必填並檢查權限）：
+
+- `Main.inspectSign(int id, CommandSender actor, boolean force): String`：JSON；單牌同步，批次請用工作 API。
+- `Main.startMaintenance(String mode, Integer id, CommandSender actor, boolean force): long`：mode 為 check/refresh，id=null 表示全部。一次只允許一個工作。
+- `Main.maintenanceStatus(CommandSender actor): String`：JSON，含工作狀態、已處理／總數、更新數、分類計數及有限樣本。
+- `Main.cancelMaintenance(CommandSender actor): boolean`：取消後續處理。
+
+Definition.prepare 必須是無交易副作用的文字產生／引用檢查，可能由維護工作呼叫；後台 actor 不含 Player，無法支援的 provider 應回傳 null，不能執行買賣、扣款或傳送。refresh 在設定／實體／文字仍相同時才更新，玩家操作尊重其他插件取消的 SignChangeEvent；不將維護事件重新寫入登記儲存，避免每筆全量 SQLite 寫入。

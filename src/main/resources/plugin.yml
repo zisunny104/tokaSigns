@@ -1,6 +1,6 @@
 name: tokaSigns
 main: dev.toka.signs.Main
-version: "0.2.4"
+version: "0.3.0"
 api: ["1.0.4"]
 author: zisunny104
 softdepend: [zero]
@@ -47,4 +47,16 @@ permissions:
   tokaSigns.type.33:
     default: op
   tokaSigns.type.41:
+    default: op
+  tokaSigns.inspect:
+    default: op
+  tokaSigns.check:
+    default: op
+  tokaSigns.refresh:
+    default: op
+  tokaSigns.jobs:
+    default: op
+  tokaSigns.jobs.cancel:
+    default: op
+  tokaSigns.force:
     default: op

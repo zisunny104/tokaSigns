@@ -3,3 +3,14 @@ storage:
 # zero sign 模組仍啟用時，不接管事件。缺少業務／保護 provider 的動作拒絕執行。
 actions:
   enabled: true
+
+# 自動依 TPS、tick 使用率與各模式近期耗時調整；下列為上限，非固定每 tick 筆數。
+maintenance:
+  normal:
+    max-records: 32
+    budget-ms: 2
+    min-tps: 17
+  force:
+    max-records: 2
+    budget-ms: 1
+    min-tps: 18

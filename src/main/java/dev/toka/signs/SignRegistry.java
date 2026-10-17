@@ -65,6 +65,10 @@ public final class SignRegistry implements AutoCloseable {
         for(int i=rows.size()-1;i>=0;i--)if(rows.get(i).getAsJsonObject().get("id").getAsInt()==id)rows.remove(i);
         replaceRecords(rows.toString());
     }
+    public Optional<SignRecord> byId(int id){return Optional.ofNullable(ids.get(id));}
+    public int size(){return ids.size();}
+    // Immutable map snapshot: O(1) setup, no full registry copy or per-tick scan.
+    Iterator<SignRecord> maintenanceIterator(){return ids.values().iterator();}
     public int nextId(){return ids.keySet().stream().mapToInt(Integer::intValue).max().orElse(-1)+1;}
     public static JsonObject encode(SignRecord r){var row=new JsonObject();row.addProperty("id",r.id());row.addProperty("x",r.x());row.addProperty("y",r.y());row.addProperty("z",r.z());row.addProperty("level",r.world());row.addProperty("type",r.type());row.addProperty("code",r.code());row.addProperty("info",r.info());row.addProperty("ticks",r.ticks());return row;}    public Optional<SignRecord> at(String world,int x,int y,int z){return Optional.ofNullable(locations.get(key(world,x,y,z)));}
     public Collection<SignRecord> records(){return List.copyOf(ids.values());}

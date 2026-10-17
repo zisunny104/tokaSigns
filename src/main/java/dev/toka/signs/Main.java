@@ -13,6 +13,7 @@ public final class Main extends PluginBase {
     public interface Definition { String[] prepare(Player player,SignRegistry.SignRecord sign,String[] lines); }
     private static Main instance;
     private SignRegistry registry;
+    private SignMaintenance maintenance;
     private Policy policy;
     private String policyOwner;
     private final Map<Integer,Action> actions=new HashMap<>();
@@ -23,6 +24,8 @@ public final class Main extends PluginBase {
             var backend=Backend.valueOf(getConfig().getString("storage.backend","sqlite").toUpperCase(Locale.ROOT));
             registry=new SignRegistry(new StoreConfig(backend,getDataFolder().toPath().resolve("storage").resolve(backend.name().toLowerCase(Locale.ROOT)),1));
             actions.put(41,(p,r)->true);definitions.put(41,(p,r,lines)->statusLines());
+            maintenance=new SignMaintenance(this);
+            getServer().getScheduler().scheduleRepeatingTask(this,new cn.nukkit.scheduler.Task(){public void onRun(int tick){maintenance.tick();}},1);
             instance=this;getServer().getPluginManager().registerEvents(new SignEvents(this),this);
             getServer().getScheduler().scheduleRepeatingTask(this,new cn.nukkit.scheduler.Task(){public void onRun(int tick){updateStatusSigns();}},25);
             getLogger().info("§b載入告示牌共 §a"+registry.records().size()+" §b個");
@@ -67,12 +70,38 @@ public final class Main extends PluginBase {
         Main m=service();if(!m.ownsEvents()||!m.allowed(player,sign,"activate"))return false;
         Action a=m.actions.get(sign.type());return a!=null&&a.execute(player,sign);
     }
+    boolean hasDefinition(int type){return definitions.containsKey(type);}
+    boolean hasPolicy(){return policy!=null;}
+    /** Single-record inspection; force may synchronously load one existing chunk. Prefer jobs for bulk work. */
+    public static String inspectSign(int id,CommandSender actor,boolean force){
+        Main m=service();if(!permits(actor,"inspect"))throw new IllegalArgumentException("沒有檢查權限");
+        return m.maintenance.inspect(id,actor,false,force).toString();
+    }
+    public static long startMaintenance(String mode,Integer id,CommandSender actor,boolean force){return service().maintenance.start(mode,id,actor,force);}
+    public static String maintenanceStatus(CommandSender actor){if(!permits(actor,"jobs"))throw new IllegalArgumentException("沒有工作查詢權限");return service().maintenance.status();}
+    public static boolean cancelMaintenance(CommandSender actor){if(!permits(actor,"jobs.cancel"))throw new IllegalArgumentException("沒有取消工作權限");return service().maintenance.cancel();}
     static boolean permits(CommandSender sender,String operation){return sender.hasPermission("tokaSigns.admin")||sender.hasPermission("tokaSigns."+operation);}
     boolean canDefine(Player p,int type){return permits(p,"type."+type)&&definitions.containsKey(type);}
     public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
         String op=args.length==0?"help":args[0].toLowerCase(Locale.ROOT);
-        if(!Set.of("help","status","edit","copy","paste","set","cancel").contains(op)){sender.sendMessage("[告示]未知指令，請使用 /sign help。");return true;}
+        if(!Set.of("help","status","edit","copy","paste","set","cancel","inspect","check","refresh","jobs").contains(op)){sender.sendMessage("[告示]未知指令，請使用 /sign help。");return true;}
         if(!permits(sender,op)){sender.sendMessage("[告示]沒有此指令的權限。");return true;}
+        if(Set.of("inspect","check","refresh","jobs").contains(op)){
+            try{
+                if(op.equals("jobs")){
+                    if(args.length==2&&args[1].equalsIgnoreCase("cancel")){sender.sendMessage("[告示]取消工作："+cancelMaintenance(sender));return true;}
+                    if(args.length!=1)throw new IllegalArgumentException("用法：/sign jobs [cancel]");
+                    var report=com.google.gson.JsonParser.parseString(maintenanceStatus(sender)).getAsJsonObject();
+                    var samples=report.remove("samples");sender.sendMessage("[告示]"+report);
+                    if(samples!=null)for(var sample:samples.getAsJsonArray()){var entry=sample.getAsJsonObject();sender.sendMessage("[告示]#"+entry.get("id")+" "+entry.get("status").getAsString());}return true;
+                }
+                if(args.length<2||args.length>3||(args.length==3&&!args[2].equals("--force")))throw new IllegalArgumentException("用法：/sign "+op+" <"+(op.equals("inspect")?"非負整數ID":"非負整數ID|all")+"> [--force]");
+                Integer id=null;if(!args[1].equalsIgnoreCase("all")||op.equals("inspect")){try{id=Integer.valueOf(args[1]);}catch(NumberFormatException e){throw new IllegalArgumentException("ID 必須為非負整數。");}if(id<0)throw new IllegalArgumentException("ID 必須為非負整數。");}
+                boolean force=args.length==3;
+                if(op.equals("inspect")){sender.sendMessage("[告示]"+inspectSign(id,sender,force));return true;}
+                sender.sendMessage("[告示]已排入工作 #"+startMaintenance(op,id,sender,force)+"；/sign jobs 查看進度。");
+            }catch(IllegalArgumentException|IllegalStateException e){sender.sendMessage("[告示]"+e.getMessage());}return true;
+        }
         if(!op.equals("set")&&args.length>1){sender.sendMessage("[告示]此指令不接受其他參數。");return true;}
         if(op.equals("help")){sendHelp(sender);return true;}
         if(op.equals("status")){sender.sendMessage("[告示]登記 "+registry.records().size()+" 筆；事件接管="+ownsEvents()+"；保護 provider="+(policyOwner==null?"未就緒":policyOwner));return true;}
@@ -89,6 +118,11 @@ public final class Main extends PluginBase {
         sender.sendMessage("§b── tokaSigns 可用指令（別名 /signs；<必填>、[選填]）──");
         if(permits(sender,"help"))sender.sendMessage("/sign help — 此說明");
         if(permits(sender,"status"))sender.sendMessage("/sign status — 登記數、接管及保護 provider");
+        if(permits(sender,"inspect"))sender.sendMessage("/sign inspect <ID> [--force] — 位置、牌面與功能設定對照");
+        if(permits(sender,"check"))sender.sendMessage("/sign check <ID|all> [--force] — 分批唯讀檢查");
+        if(permits(sender,"refresh"))sender.sendMessage("/sign refresh <ID|all> [--force] — 分批依設定更新牌面，不修復 NBT");
+        if(permits(sender,"jobs"))sender.sendMessage(permits(sender,"jobs.cancel")?"/sign jobs [cancel] — 進度與統計／取消":"/sign jobs — 進度與統計");
+        if(permits(sender,"force"))sender.sendMessage("[告示]--force 可載入既有區塊（依效能動態分批）；不產生新區塊，不略過權限。");
         if(sender instanceof Player){
             if(permits(sender,"edit"))sender.sendMessage("/sign edit — 點選一般牌改四行；功能牌改代碼");
             if(permits(sender,"copy"))sender.sendMessage("/sign copy — 點選一般牌複製文字");
@@ -125,7 +159,7 @@ public final class Main extends PluginBase {
             if(entity instanceof cn.nukkit.blockentity.BlockEntitySign sign)try{sign.setText(statusLines());}catch(RuntimeException error){getLogger().warning("狀態牌更新失敗 id="+r.id());}
         }
     }
-    public void onDisable(){instance=null;actions.clear();definitions.clear();SignEvents.clear();policy=null;if(registry!=null)try{registry.close();}catch(Exception error){getLogger().warning("告示牌儲存關閉失敗");}}
+    public void onDisable(){if(maintenance!=null)maintenance.close();instance=null;actions.clear();definitions.clear();SignEvents.clear();policy=null;if(registry!=null)try{registry.close();}catch(Exception error){getLogger().warning("告示牌儲存關閉失敗");}}
 }
 
 

@@ -63,11 +63,13 @@ public final class SignEvents implements Listener {
     }
     private SignRegistry.SignRecord record(Block b){return main.getRegistry().at(b.getLevel().getFolderName(),b.getFloorX(),b.getFloorY(),b.getFloorZ()).orElse(null);}
     private SignRegistry.SignRecord plain(Block b){return new SignRegistry.SignRecord(-1,b.getFloorX(),b.getFloorY(),b.getFloorZ(),b.getLevel().getFolderName(),0,null,null,0);}
-    @EventHandler(priority=EventPriority.HIGHEST,ignoreCancelled=true)
+    // Using a sign is allowed inside protected places, so a cancelled event is still handled; editing modes are not.
+    @EventHandler(priority=EventPriority.HIGHEST)
     public void interact(PlayerInteractEvent event){
         if(!main.ownsEvents())return;
         if(event.getAction()!=PlayerInteractEvent.Action.RIGHT_CLICK_BLOCK)return;
         Block b=event.getBlock();var r=record(b);Player p=event.getPlayer();String mode=modes.get(p.getUniqueId());
+        if(event.isCancelled()&&(r==null||mode!=null))return;
         var entity=b.getLevel().getBlockEntity(b);
         if(!(entity instanceof BlockEntitySign sign)){if(r!=null){event.setCancelled();p.sendMessage(Main.tr("err.signDataNotReady"));}return;}
         if(mode!=null){

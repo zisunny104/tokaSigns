@@ -1,0 +1,176 @@
+# tokaSigns 繁體中文語系檔（zh-TW）
+#
+# 這個檔案放著插件所有「使用者看得到的文字」。伺服器擁有者可以把同名檔放進
+# plugins/tokaSigns/lang/zh-TW.yml 覆蓋個別文字，沒寫到的 key 仍使用 jar 內建的內容。
+# 語言由 config.yml 的 language 決定。
+#
+# 參數：${0}、${1}… 依序代表程式傳入的值（只替換一次，缺少時保留原樣並警告）。
+# 色碼慣例（與 tokaI18n 一致）：
+#   §b 一般文字　§a 數字／名稱／值（寫成 §a${0}§b）　§e 警告／指令　§c 錯誤與拒絕
+#   §7 用法與補充說明　§6 標題　§r 重設樣式
+#   後台 log 不加方括號標籤；玩家訊息固定使用前綴「§7[告示]§r 」。
+# 穩定的 code（工作狀態 DONE／CANCELLED、檢查結果 MATCH／TEXT_DIFFERS…、類型 ID）不翻譯，
+# 因為它們也會出現在 JSON 報告與 API 回傳中。
+
+# ───────────────────────── 指令說明與用法（cmd） ─────────────────────────
+cmd:
+  sign:
+    # 指令簡述（與 plugin.yml 的 description 一致）
+    desc: "告示牌管理與複製貼上"
+    # 總用法
+    usage: "/sign <help|status|edit|copy|paste|set|cancel|inspect|check|refresh|jobs> [參數]"
+    # /sign set 的用法
+    usageSet: "/sign set <類型名稱或正整數ID> <單一代碼>（狀態牌填 -）"
+    # /sign set 在 SignEvents 內的簡短用法（沿用原文字）
+    usageSetShort: "/sign set buy|sell|type 商品代碼"
+    # /sign inspect 的用法
+    usageInspect: "/sign inspect <非負整數ID> [--force]"
+    # /sign check、/sign refresh 的用法；${0}＝子指令名稱（check 或 refresh）
+    usageMaint: "/sign ${0} <非負整數ID|all> [--force]"
+    # /sign jobs 的用法
+    usageJobs: "/sign jobs [cancel]"
+
+# ───────────────────────── /sign help（help） ─────────────────────────
+# 每一行格式為「權限標籤|內容」，依玩家權限過濾後顯示（標籤與 | 不會顯示）：
+#   *            任何人都顯示
+#   <操作>       需要 tokaSigns.<操作> 權限（admin 視為全有）
+#   p:<操作>     同上，但只對遊戲內玩家顯示
+#   type.<ID>    需要 set 權限、tokaSigns.type.<ID> 權限，且該類型的 provider 已就緒
+# ${0}＝目前有設定權限且 provider 已就緒的類型 ID 清單，例如 [10, 11, 41]
+help:
+  sign:
+    - "*|§6§ltokaSigns 說明 §7（別名 /signs；<必填>、[選填]）"
+    - "help|§e/sign help §7- §b顯示此說明"
+    - "status|§e/sign status §7- §b登記數、事件接管及保護 provider"
+    - "inspect|§e/sign inspect <ID> [--force] §7- §b位置、牌面與功能設定對照"
+    - "check|§e/sign check <ID|all> [--force] §7- §b分批唯讀檢查"
+    - "refresh|§e/sign refresh <ID|all> [--force] §7- §b分批依設定更新牌面，不修復 NBT"
+    - "jobs|§e/sign jobs §7- §b查看進度與統計"
+    - "jobs.cancel|§e/sign jobs cancel §7- §b取消後續處理（不回復已更新的牌面）"
+    - "force|§e--force §7- §b可載入既有區塊（依效能動態分批）；不產生新區塊，不略過權限"
+    - "p:edit|§e/sign edit §7- §b點選一般牌改四行；功能牌改代碼"
+    - "p:copy|§e/sign copy §7- §b點選一般牌複製文字"
+    - "p:paste|§e/sign paste §7- §b點選一般牌貼上文字"
+    - "p:cancel|§e/sign cancel §7- §b取消操作，保留剪貼簿"
+    - "p:set|§e/sign set <類型名稱或正整數ID> <單一代碼> §7- §b點選設定功能；代碼不可含空白，狀態牌填 -"
+    - "p:set|§7目前有設定權限且 provider 已就緒的類型：§a${0}§7（可直接填數字ID）"
+    - "set|§6§l直接填寫告示牌 §6[ §f第1行 | 第2行 | 第3行 | 第4行§6 ]"
+    - "set|§7<參數> 必填，[參數] 選填。外框、標記及 | 不用輸入，「留空」不填字"
+    - "type.10|§6[ §ftpr | <區域代碼> | 留空 | 留空§6 ] §7- §b區域傳送"
+    - "type.11|§6[ §ftpp | <傳送點名稱> | 留空 | 留空§6 ] §7- §b公共傳送點"
+    - "type.31|§6[ §fb | <商品代碼> | 留空 | 留空§6 ] §7- §b購買商品"
+    - "type.32|§6[ §fs | <商品代碼> | 留空 | 留空§6 ] §7- §b回收商品"
+    - "type.33|§6[ §fitem | 留空 | 留空 | 留空§6 ] §7- §b物品管理入口"
+    - "type.41|§6[ §fstatus | 留空 | 留空 | 留空§6 ] §7- §b伺服器狀態"
+    - "*|§7顯示指令權限不代表任何位置都可修改；仍檢查保護服務、功能 provider 與接管狀態"
+
+# ───────────────────────── 玩家／指令訊息（msg） ─────────────────────────
+msg:
+  # 把例外或報告文字包上前綴後送出；${0}＝內容（例外訊息、JSON 報告）
+  reply: "§7[告示]§r §b${0}"
+  # 取消維護工作的結果；${0}＝狀態字（status.yes 或 status.no）
+  jobCancelResult: "§7[告示]§r §b取消工作：§a${0}"
+  # /sign jobs 的問題樣本；${0}＝告示牌 ID，${1}＝檢查結果 code
+  jobSample: "§7[告示]§r §b#§a${0} §b${1}"
+  # 已排入維護工作；${0}＝工作編號
+  jobQueued: "§7[告示]§r §b已排入工作 #§a${0}§b；§e/sign jobs §b查看進度。"
+  # 維護工作結束；${0}＝工作編號，${1}＝結束狀態 code（DONE／CANCELLED），${2}＝已處理，${3}＝總數，${4}＝更新數
+  jobFinished: "§7[告示]§r §b維護工作 #§a${0} ${1}§b：§a${2}§b/§a${3}§b，更新 §a${4}§b；§e/sign jobs §b查看結果。"
+  # /sign status；${0}＝登記筆數，${1}＝事件接管（status.yes／status.no），${2}＝保護 provider 名稱或 status.notReady
+  status: "§7[告示]§r §b登記 §a${0} §b筆；事件接管=§a${1}§b；保護 provider=§a${2}"
+  # /sign cancel
+  cancelled: "§7[告示]§r §b已取消操作，保留剪貼簿。"
+  # 請玩家先複製才能貼上
+  copyFirst: "§7[告示]§r §e請先複製告示牌。"
+  # 進入點選模式；${0}＝操作名稱（status.mode.*）
+  clickToDo: "§7[告示]§r §b請點選告示牌進行§a${0}"
+  # 設定完成
+  setDone: "§7[告示]§r §a功能設定完成。"
+  # 複製／貼上完成
+  done: "§7[告示]§r §a操作完成。"
+
+# ───────────────────────── 錯誤與拒絕（err） ─────────────────────────
+err:
+  unknownCommand: "§7[告示]§r §c未知指令，請使用 §e/sign help§c。"
+  noPermission: "§7[告示]§r §c沒有此指令的權限。"
+  noExtraArgs: "§7[告示]§r §c此指令不接受其他參數。"
+  playerOnly: "§7[告示]§r §c此指令限遊戲內玩家使用。"
+  eventsNotOwned: "§7[告示]§r §c事件接管尚未啟用，請以 §e/sign status §c查看。"
+  # 用法錯誤；${0}＝用法文字（cmd.sign.usage*）
+  usage: "§7[告示]§r §c用法：§e${0}"
+  typeNotAuthorized: "§7[告示]§r §c類型沒有授權或 provider 尚未就緒。"
+  noEditHere: "§7[告示]§r §c沒有此位置的編輯權限。"
+  noSetHere: "§7[告示]§r §c沒有此位置的設定權限。"
+  cannotDefine: "§7[告示]§r §c功能類型無法設定。"
+  providerNotReady: "§7[告示]§r §c此功能的 provider 尚未就緒。"
+  signChanged: "§7[告示]§r §c告示牌已變更，請重新開啟。"
+  signDataNotReady: "§7[告示]§r §c告示牌資料尚未就緒，請稍後再試。"
+  noCopyPaste: "§7[告示]§r §c此處無法複製或貼上；需要保護服務授權。"
+  cannotUse: "§7[告示]§r §c目前無法使用此告示牌。"
+  # 以下為例外訊息（會被指令攔截後以 msg.reply 加前綴送出），不含前綴
+  ex:
+    noInspectPermission: "§c沒有檢查權限"
+    noJobsPermission: "§c沒有工作查詢權限"
+    noCancelPermission: "§c沒有取消工作權限"
+    noJobPermission: "§c沒有工作權限"
+    noForcePermission: "§c沒有強制載入權限"
+    jobRunning: "§c已有維護工作執行中，請查看 §e/sign jobs"
+    signNotFound: "§c找不到告示牌 ID"
+    badId: "§cID 必須為非負整數。"
+  # 直接填寫四行時的檢查結果（SignInput 回傳這些 key）
+  input:
+    fourLines: "§7[告示]§r §c需要四行文字。"
+    badFormat: "§7[告示]§r §c文字格式不正確或過長。"
+    leaveBlank34: "§7[告示]§r §c功能牌第 3、4 行請留空，顯示內容由功能產生。"
+    leaveBlank2: "§7[告示]§r §c此功能第 2 行請留空。"
+    needCode: "§7[告示]§r §c第 2 行需要功能代碼；請查看 §e/sign help§c。"
+
+# ───────────────────────── 表單與告示牌牌面（ui） ─────────────────────────
+ui:
+  edit:
+    # 編輯表單標題
+    title: "告示牌編輯"
+    # 一般牌每行輸入框標籤；${0}＝行號（1～4）
+    line: "第 ${0} 行"
+    # 功能牌的代碼輸入框標籤
+    code: "功能代碼"
+  # 狀態牌（type 41）牌面四行；牌面有自己的樣式，不套用訊息色碼慣例
+  statusSign:
+    title: "§r§a⦋狀態⦌§r"
+    # ${0}＝TPS（一位小數）
+    tps: "TPS ${0}"
+    # ${0}＝tick 使用率（一位小數，單位 %）
+    load: "載入 ${0}%"
+    # ${0}＝上傳、${1}＝下載（各一位小數）
+    net: "↑ ${0} ↓ ${1}"
+
+# ───────────────────────── 後台文字（log） ─────────────────────────
+log:
+  # 啟動完成；${0}＝載入的告示牌數
+  loaded: "§b載入告示牌共 §a${0} §b個"
+  storageFailed: "§c告示牌儲存無法載入；請保留原始資料"
+  storageCloseFailed: "§e告示牌儲存關閉失敗"
+  # ${0}＝例外類別名稱
+  policyFailed: "§e告示牌權限服務失敗，已拒絕此次操作：§a${0}"
+  # ${0}＝告示牌 ID
+  statusUpdateFailed: "§e狀態牌更新失敗 id=§a${0}"
+  # ${0}＝例外類別名稱
+  formFailed: "§e告示牌表單更新失敗：§a${0}"
+  setupFailed: "§e告示牌功能設定失敗：§a${0}"
+  updateFailed: "§e告示牌更新失敗：§a${0}"
+  deleteFailed: "§e告示牌刪除失敗：§a${0}"
+  # ${0}＝告示牌 ID，${1}＝例外類別名稱
+  actionFailed: "§e告示牌動作失敗 id=§a${0}§e：§a${1}"
+
+# ───────────────────────── 狀態字（status） ─────────────────────────
+status:
+  # yes、no 在 YAML 會被當成布林值，所以 key 必須加引號
+  "yes": "是"
+  "no": "否"
+  notReady: "未就緒"
+  # 點選模式的操作名稱（msg.clickToDo 的 ${0}）
+  mode:
+    copy: "複製"
+    paste: "貼上"
+    edit: "編輯"
+    set: "功能設定"

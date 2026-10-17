@@ -1,62 +1,85 @@
 name: tokaSigns
 main: dev.toka.signs.Main
-version: "0.3.0"
+version: "0.4.0"
 api: ["1.0.4"]
 author: zisunny104
 softdepend: [zero]
+description: Nukkit 告示牌管理：複製貼上、編輯、功能牌設定與維護檢查
 commands:
   sign:
     aliases: [signs]
     description: 告示牌管理與複製貼上
+    usage: "/sign <help|status|edit|copy|paste|set|cancel|inspect|check|refresh|jobs> [參數]（/sign help 查看完整說明）"
 permissions:
   tokaSigns.admin:
+    description: 告示牌整體管理權限，視為擁有下列所有權限
     default: op
-
-
-
   tokaSigns.help:
+    description: 使用 /sign help 查看說明
     default: true
   tokaSigns.cancel:
+    description: 使用 /sign cancel 取消待選取的操作
     default: true
   tokaSigns.status:
+    description: 使用 /sign status 查看登記數、事件接管與保護 provider
     default: op
   tokaSigns.edit:
+    description: 使用 /sign edit 編輯告示牌（一般牌改四行、功能牌改代碼）
     default: op
   tokaSigns.copy:
+    description: 使用 /sign copy 複製一般告示牌文字
     default: op
   tokaSigns.paste:
+    description: 使用 /sign paste 貼上一般告示牌文字
     default: op
   tokaSigns.set:
+    description: 使用 /sign set 或直接填寫四行建立、設定功能牌
     default: op
   tokaSigns.break:
+    description: 破壞受管理的功能告示牌
     default: op
   tokaSigns.type.10:
+    description: 建立或編輯區域傳送告示牌（類型 10）
     default: op
   tokaSigns.type.11:
+    description: 建立或編輯公共傳送點告示牌（類型 11）
     default: op
   tokaSigns.type.12:
+    description: 建立或編輯類型 12 告示牌
     default: op
   tokaSigns.type.13:
+    description: 建立或編輯類型 13 告示牌
     default: op
   tokaSigns.type.21:
+    description: 建立或編輯類型 21 告示牌
     default: op
   tokaSigns.type.31:
+    description: 建立或編輯購買商品告示牌（類型 31）
     default: op
   tokaSigns.type.32:
+    description: 建立或編輯回收商品告示牌（類型 32）
     default: op
   tokaSigns.type.33:
+    description: 建立或編輯物品管理入口告示牌（類型 33）
     default: op
   tokaSigns.type.41:
+    description: 建立或編輯伺服器狀態告示牌（類型 41）
     default: op
   tokaSigns.inspect:
+    description: 使用 /sign inspect 檢查單一告示牌
     default: op
   tokaSigns.check:
+    description: 使用 /sign check 分批唯讀檢查告示牌
     default: op
   tokaSigns.refresh:
+    description: 使用 /sign refresh 分批依設定更新牌面
     default: op
   tokaSigns.jobs:
+    description: 使用 /sign jobs 查看維護工作進度
     default: op
   tokaSigns.jobs.cancel:
+    description: 使用 /sign jobs cancel 取消維護工作
     default: op
   tokaSigns.force:
+    description: 維護指令使用 --force 載入既有區塊
     default: op

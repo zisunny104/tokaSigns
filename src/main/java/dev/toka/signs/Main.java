@@ -4,6 +4,7 @@ import cn.nukkit.Player;
 import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.command.*;
 import dev.toka.storage.*;
+import dev.toka.i18n.Messages;
 import java.util.*;
 
 public final class Main extends PluginBase {
@@ -14,12 +15,14 @@ public final class Main extends PluginBase {
     private static Main instance;
     private SignRegistry registry;
     private SignMaintenance maintenance;
+    private Messages messages;
     private Policy policy;
     private String policyOwner;
     private final Map<Integer,Action> actions=new HashMap<>();
     private final Map<Integer,Definition> definitions=new HashMap<>();
     public void onEnable(){
         saveDefaultConfig();
+        messages=new Messages(getClass().getClassLoader(),getDataFolder().toPath(),getConfig().getString("language","zh-TW"),line->getLogger().warning(line));
         try{
             var backend=Backend.valueOf(getConfig().getString("storage.backend","sqlite").toUpperCase(Locale.ROOT));
             registry=new SignRegistry(new StoreConfig(backend,getDataFolder().toPath().resolve("storage").resolve(backend.name().toLowerCase(Locale.ROOT)),1));
@@ -28,8 +31,8 @@ public final class Main extends PluginBase {
             getServer().getScheduler().scheduleRepeatingTask(this,new cn.nukkit.scheduler.Task(){public void onRun(int tick){maintenance.tick();}},1);
             instance=this;getServer().getPluginManager().registerEvents(new SignEvents(this),this);
             getServer().getScheduler().scheduleRepeatingTask(this,new cn.nukkit.scheduler.Task(){public void onRun(int tick){updateStatusSigns();}},25);
-            getLogger().info("§b載入告示牌共 §a"+registry.records().size()+" §b個");
-        }catch(Exception error){throw new IllegalStateException("告示牌儲存無法載入；請保留原始資料",error);}
+            getLogger().info(messages.text("log.loaded",registry.records().size()));
+        }catch(Exception error){getLogger().error(messages.text("log.storageFailed"));throw new IllegalStateException("Sign storage could not be loaded; keep the original data",error);}
     }
     private static Main service(){
         if(instance==null||!instance.isEnabled())throw new IllegalStateException("tokaSigns unavailable");
@@ -63,7 +66,7 @@ public final class Main extends PluginBase {
     boolean allowed(Player p,SignRegistry.SignRecord sign,String operation){
         if(!operation.equals("activate")&&!permits(p,operation.equals("create")?"set":operation))return false;
         try{return policy!=null&&policy.authorize(p,sign,operation)==Decision.ALLOW;}
-        catch(Exception|LinkageError error){getLogger().warning("告示牌權限服務失敗，已拒絕此次操作："+error.getClass().getSimpleName());return false;}
+        catch(Exception|LinkageError error){getLogger().warning(tr("log.policyFailed",error.getClass().getSimpleName()));return false;}
     }
     String[] prepare(Player p,SignRegistry.SignRecord r,String[] lines){var d=definitions.get(r.type());return d==null?null:d.prepare(p,r,lines);}
     public static boolean activate(Player player,SignRegistry.SignRecord sign){
@@ -74,92 +77,76 @@ public final class Main extends PluginBase {
     boolean hasPolicy(){return policy!=null;}
     /** Single-record inspection; force may synchronously load one existing chunk. Prefer jobs for bulk work. */
     public static String inspectSign(int id,CommandSender actor,boolean force){
-        Main m=service();if(!permits(actor,"inspect"))throw new IllegalArgumentException("沒有檢查權限");
+        Main m=service();if(!permits(actor,"inspect"))throw new IllegalArgumentException(tr("err.ex.noInspectPermission"));
         return m.maintenance.inspect(id,actor,false,force).toString();
     }
     public static long startMaintenance(String mode,Integer id,CommandSender actor,boolean force){return service().maintenance.start(mode,id,actor,force);}
-    public static String maintenanceStatus(CommandSender actor){if(!permits(actor,"jobs"))throw new IllegalArgumentException("沒有工作查詢權限");return service().maintenance.status();}
-    public static boolean cancelMaintenance(CommandSender actor){if(!permits(actor,"jobs.cancel"))throw new IllegalArgumentException("沒有取消工作權限");return service().maintenance.cancel();}
+    public static String maintenanceStatus(CommandSender actor){if(!permits(actor,"jobs"))throw new IllegalArgumentException(tr("err.ex.noJobsPermission"));return service().maintenance.status();}
+    public static boolean cancelMaintenance(CommandSender actor){if(!permits(actor,"jobs.cancel"))throw new IllegalArgumentException(tr("err.ex.noCancelPermission"));return service().maintenance.cancel();}
+    static String tr(String key,Object... args){return instance==null||instance.messages==null?key:instance.messages.text(key,args);}
+    private String yesNo(boolean value){return messages.text(value?"status.yes":"status.no");}
+    private void reply(CommandSender sender,String text){sender.sendMessage(messages.text("msg.reply",text));}
     static boolean permits(CommandSender sender,String operation){return sender.hasPermission("tokaSigns.admin")||sender.hasPermission("tokaSigns."+operation);}
     boolean canDefine(Player p,int type){return permits(p,"type."+type)&&definitions.containsKey(type);}
     public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
         String op=args.length==0?"help":args[0].toLowerCase(Locale.ROOT);
-        if(!Set.of("help","status","edit","copy","paste","set","cancel","inspect","check","refresh","jobs").contains(op)){sender.sendMessage("[告示]未知指令，請使用 /sign help。");return true;}
-        if(!permits(sender,op)){sender.sendMessage("[告示]沒有此指令的權限。");return true;}
+        if(!Set.of("help","status","edit","copy","paste","set","cancel","inspect","check","refresh","jobs").contains(op)){sender.sendMessage(messages.text("err.unknownCommand"));return true;}
+        if(!permits(sender,op)){sender.sendMessage(messages.text("err.noPermission"));return true;}
         if(Set.of("inspect","check","refresh","jobs").contains(op)){
             try{
                 if(op.equals("jobs")){
-                    if(args.length==2&&args[1].equalsIgnoreCase("cancel")){sender.sendMessage("[告示]取消工作："+cancelMaintenance(sender));return true;}
-                    if(args.length!=1)throw new IllegalArgumentException("用法：/sign jobs [cancel]");
+                    if(args.length==2&&args[1].equalsIgnoreCase("cancel")){sender.sendMessage(messages.text("msg.jobCancelResult",yesNo(cancelMaintenance(sender))));return true;}
+                    if(args.length!=1)throw new IllegalArgumentException(messages.text("err.usage",messages.text("cmd.sign.usageJobs")));
                     var report=com.google.gson.JsonParser.parseString(maintenanceStatus(sender)).getAsJsonObject();
-                    var samples=report.remove("samples");sender.sendMessage("[告示]"+report);
-                    if(samples!=null)for(var sample:samples.getAsJsonArray()){var entry=sample.getAsJsonObject();sender.sendMessage("[告示]#"+entry.get("id")+" "+entry.get("status").getAsString());}return true;
+                    var samples=report.remove("samples");reply(sender,report.toString());
+                    if(samples!=null)for(var sample:samples.getAsJsonArray()){var entry=sample.getAsJsonObject();sender.sendMessage(messages.text("msg.jobSample",entry.get("id"),entry.get("status").getAsString()));}return true;
                 }
-                if(args.length<2||args.length>3||(args.length==3&&!args[2].equals("--force")))throw new IllegalArgumentException("用法：/sign "+op+" <"+(op.equals("inspect")?"非負整數ID":"非負整數ID|all")+"> [--force]");
-                Integer id=null;if(!args[1].equalsIgnoreCase("all")||op.equals("inspect")){try{id=Integer.valueOf(args[1]);}catch(NumberFormatException e){throw new IllegalArgumentException("ID 必須為非負整數。");}if(id<0)throw new IllegalArgumentException("ID 必須為非負整數。");}
+                if(args.length<2||args.length>3||(args.length==3&&!args[2].equals("--force")))throw new IllegalArgumentException(messages.text("err.usage",op.equals("inspect")?messages.text("cmd.sign.usageInspect"):messages.text("cmd.sign.usageMaint",op)));
+                Integer id=null;if(!args[1].equalsIgnoreCase("all")||op.equals("inspect")){try{id=Integer.valueOf(args[1]);}catch(NumberFormatException e){throw new IllegalArgumentException(messages.text("err.ex.badId"));}if(id<0)throw new IllegalArgumentException(messages.text("err.ex.badId"));}
                 boolean force=args.length==3;
-                if(op.equals("inspect")){sender.sendMessage("[告示]"+inspectSign(id,sender,force));return true;}
-                sender.sendMessage("[告示]已排入工作 #"+startMaintenance(op,id,sender,force)+"；/sign jobs 查看進度。");
-            }catch(IllegalArgumentException|IllegalStateException e){sender.sendMessage("[告示]"+e.getMessage());}return true;
+                if(op.equals("inspect")){reply(sender,inspectSign(id,sender,force));return true;}
+                sender.sendMessage(messages.text("msg.jobQueued",startMaintenance(op,id,sender,force)));
+            }catch(IllegalArgumentException|IllegalStateException e){reply(sender,e.getMessage());}return true;
         }
-        if(!op.equals("set")&&args.length>1){sender.sendMessage("[告示]此指令不接受其他參數。");return true;}
+        if(!op.equals("set")&&args.length>1){sender.sendMessage(messages.text("err.noExtraArgs"));return true;}
         if(op.equals("help")){sendHelp(sender);return true;}
-        if(op.equals("status")){sender.sendMessage("[告示]登記 "+registry.records().size()+" 筆；事件接管="+ownsEvents()+"；保護 provider="+(policyOwner==null?"未就緒":policyOwner));return true;}
-        if(!(sender instanceof Player p)){sender.sendMessage("[告示]此指令限遊戲內玩家使用。");return true;}
-        if(op.equals("cancel")){SignEvents.cancel(p);sender.sendMessage("[告示]已取消操作，保留剪貼簿。");return true;}
-        if(!ownsEvents()){sender.sendMessage("[告示]事件接管尚未啟用，請以 /sign status 查看。");return true;}
+        if(op.equals("status")){sender.sendMessage(messages.text("msg.status",registry.records().size(),yesNo(ownsEvents()),policyOwner==null?messages.text("status.notReady"):policyOwner));return true;}
+        if(!(sender instanceof Player p)){sender.sendMessage(messages.text("err.playerOnly"));return true;}
+        if(op.equals("cancel")){SignEvents.cancel(p);sender.sendMessage(messages.text("msg.cancelled"));return true;}
+        if(!ownsEvents()){sender.sendMessage(messages.text("err.eventsNotOwned"));return true;}
         if(op.equals("set")){
-            if(args.length!=3){sender.sendMessage("[告示]用法：/sign set <類型名稱或正整數ID> <單一代碼>（狀態牌填 -）");return true;}
+            if(args.length!=3){sender.sendMessage(messages.text("err.usage",messages.text("cmd.sign.usageSet")));return true;}
             SignEvents.setDefinitionMode(p,args[1],args[2]);return true;
         }
         SignEvents.setMode(p,op);return true;
     }
+    /** Lines of help.sign look like "tag|text"; the tag decides who sees the line (see lang/zh-TW.yml). */
     private void sendHelp(CommandSender sender){
-        sender.sendMessage("§b── tokaSigns 可用指令（別名 /signs；<必填>、[選填]）──");
-        if(permits(sender,"help"))sender.sendMessage("/sign help — 此說明");
-        if(permits(sender,"status"))sender.sendMessage("/sign status — 登記數、接管及保護 provider");
-        if(permits(sender,"inspect"))sender.sendMessage("/sign inspect <ID> [--force] — 位置、牌面與功能設定對照");
-        if(permits(sender,"check"))sender.sendMessage("/sign check <ID|all> [--force] — 分批唯讀檢查");
-        if(permits(sender,"refresh"))sender.sendMessage("/sign refresh <ID|all> [--force] — 分批依設定更新牌面，不修復 NBT");
-        if(permits(sender,"jobs"))sender.sendMessage(permits(sender,"jobs.cancel")?"/sign jobs [cancel] — 進度與統計／取消":"/sign jobs — 進度與統計");
-        if(permits(sender,"force"))sender.sendMessage("[告示]--force 可載入既有區塊（依效能動態分批）；不產生新區塊，不略過權限。");
-        if(sender instanceof Player){
-            if(permits(sender,"edit"))sender.sendMessage("/sign edit — 點選一般牌改四行；功能牌改代碼");
-            if(permits(sender,"copy"))sender.sendMessage("/sign copy — 點選一般牌複製文字");
-            if(permits(sender,"paste"))sender.sendMessage("/sign paste — 點選一般牌貼上文字");
-            if(permits(sender,"cancel"))sender.sendMessage("/sign cancel — 取消操作，保留剪貼簿");
-            if(permits(sender,"set")){
-                sender.sendMessage("/sign set <類型名稱或正整數ID> <單一代碼> — 點選設定功能；代碼不可含空白，狀態牌填 -");
-                var types=new TreeSet<Integer>();for(int type:definitions.keySet())if(permits(sender,"type."+type))types.add(type);
-                sender.sendMessage("[告示]目前有設定權限且 provider 已就緒的類型："+types+"（可直接填數字ID）");
-            }
+        var types=new TreeSet<Integer>();for(int type:definitions.keySet())if(permits(sender,"type."+type))types.add(type);
+        for(String line:messages.lines("help.sign",types)){
+            int bar=line.indexOf('|');if(bar<0){sender.sendMessage(line);continue;}
+            String tag=line.substring(0,bar);boolean playerOnly=tag.startsWith("p:");if(playerOnly)tag=tag.substring(2);
+            if(playerOnly&&!(sender instanceof Player))continue;
+            boolean show;
+            if(tag.equals("*"))show=true;
+            else if(tag.startsWith("type.")){
+                int type;try{type=Integer.parseInt(tag.substring(5));}catch(NumberFormatException e){continue;}
+                show=permits(sender,"set")&&definitions.containsKey(type)&&permits(sender,tag);
+            }else show=permits(sender,tag);
+            if(show)sender.sendMessage(line.substring(bar+1));
         }
-        if(permits(sender,"set")){
-            sender.sendMessage("§b── 直接填寫告示牌：§6[ §f第1行 | 第2行 | 第3行 | 第4行§6 ] ──");
-            sender.sendMessage("[告示]<參數> 必填，[參數] 選填。外框、標記及 | 不用輸入，「留空」不填字。");
-            signInputHelp(sender,10,"tpr | <區域代碼> | 留空 | 留空 — 區域傳送");
-            signInputHelp(sender,11,"tpp | <傳送點名稱> | 留空 | 留空 — 公共傳送點");
-            signInputHelp(sender,31,"b | <商品代碼> | 留空 | 留空 — 購買商品");
-            signInputHelp(sender,32,"s | <商品代碼> | 留空 | 留空 — 回收商品");
-            signInputHelp(sender,33,"item | 留空 | 留空 | 留空 — 物品管理入口");
-            signInputHelp(sender,41,"status | 留空 | 留空 | 留空 — 伺服器狀態");
-        }
-        sender.sendMessage("[告示]顯示指令權限不代表任何位置都可修改；仍檢查保護服務、功能 provider 與接管狀態。");
     }
-    private void signInputHelp(CommandSender sender,int type,String example){
-        if(definitions.containsKey(type)&&permits(sender,"type."+type))sender.sendMessage("§6[ §f"+example.substring(0,example.indexOf(" — "))+"§6 ]§r"+example.substring(example.indexOf(" — ")));
-    }
-    private String[] statusLines(){return new String[]{"§r§a⦋狀態⦌§r","TPS "+String.format(Locale.ROOT,"%.1f",getServer().getTicksPerSecond()),"載入 "+String.format(Locale.ROOT,"%.1f%%",getServer().getTickUsage()),"↑ "+String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getUpload())+" ↓ "+String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getDownload())};}
+    private String[] statusLines(){return new String[]{messages.text("ui.statusSign.title"),messages.text("ui.statusSign.tps",String.format(Locale.ROOT,"%.1f",getServer().getTicksPerSecond())),messages.text("ui.statusSign.load",String.format(Locale.ROOT,"%.1f",getServer().getTickUsage())),messages.text("ui.statusSign.net",String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getUpload()),String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getDownload()))};}
     private void updateStatusSigns(){
         if(!ownsEvents())return;
         for(var r:registry.records())if(r.type()==41){
             var world=getServer().getLevelByName(r.world());
             if(world==null||!world.isChunkLoaded(r.x()>>4,r.z()>>4))continue;
             var entity=world.getBlockEntity(new cn.nukkit.math.Vector3(r.x(),r.y(),r.z()));
-            if(entity instanceof cn.nukkit.blockentity.BlockEntitySign sign)try{sign.setText(statusLines());}catch(RuntimeException error){getLogger().warning("狀態牌更新失敗 id="+r.id());}
+            if(entity instanceof cn.nukkit.blockentity.BlockEntitySign sign)try{sign.setText(statusLines());}catch(RuntimeException error){getLogger().warning(messages.text("log.statusUpdateFailed",r.id()));}
         }
     }
-    public void onDisable(){if(maintenance!=null)maintenance.close();instance=null;actions.clear();definitions.clear();SignEvents.clear();policy=null;if(registry!=null)try{registry.close();}catch(Exception error){getLogger().warning("告示牌儲存關閉失敗");}}
+    public void onDisable(){if(maintenance!=null)maintenance.close();instance=null;actions.clear();definitions.clear();SignEvents.clear();policy=null;if(registry!=null)try{registry.close();}catch(Exception error){getLogger().warning(messages.text("log.storageCloseFailed"));}}
 }
 
 

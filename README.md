@@ -100,3 +100,7 @@ help 將指令與告示牌輸入分區，依 set／type 權限及 Definition 註
 - `Main.cancelMaintenance(CommandSender actor): boolean`：取消後續處理。
 
 Definition.prepare 必須是無交易副作用的文字產生／引用檢查，可能由維護工作呼叫；後台 actor 不含 Player，無法支援的 provider 應回傳 null，不能執行買賣、扣款或傳送。refresh 在設定／實體／文字仍相同時才更新，玩家操作尊重其他插件取消的 SignChangeEvent；不將維護事件重新寫入登記儲存，避免每筆全量 SQLite 寫入。
+
+## 多語系（0.4.0）
+
+所有玩家看得到的文字（訊息、指令用法與 help、後台 log、表單、狀態牌牌面）集中在 `src/main/resources/lang/zh-TW.yml`，由內嵌的 tokaI18n 讀取；`config.yml` 的 `language` 決定語言（目前只有 `zh-TW`）。伺服器擁有者可把同名檔放到 `plugins/tokaSigns/lang/` 覆蓋個別文字，沒寫到的 key 仍用內建。`/sign help` 依權限顯示各子指令說明。key 清單與待確認事項見 [docs/I18N.md](docs/I18N.md)。

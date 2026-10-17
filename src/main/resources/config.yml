@@ -1,16 +1,37 @@
+# tokaSigns 設定檔（繁體中文註解）
+# 修改後需重新啟動伺服器才會套用。
+
+# 顯示語言，決定 lang/<語言>.yml 的文字。目前提供：zh-TW（繁體中文）。
+# 伺服器擁有者可在 plugins/tokaSigns/lang/ 放同名檔案覆蓋個別文字。
+language: zh-TW
+
+# 告示牌登記資料的儲存方式。
 storage:
+  # 可填：sqlite（預設）、json、yaml。檔案位於 plugins/tokaSigns/storage/<backend>/。
+  # 改設定不會自動搬移既有資料；切換前請先備份並確認讀回結果。
   backend: sqlite
-# zero sign 模組仍啟用時，不接管事件。缺少業務／保護 provider 的動作拒絕執行。
+
 actions:
+  # 是否由本插件接管告示牌事件（點擊、建立、編輯、破壞）。可填：true、false。
+  # 注意：zero 的 sign 模組仍啟用時，本插件不接管事件；缺少業務／保護 provider 的動作會被拒絕。
   enabled: true
 
-# 自動依 TPS、tick 使用率與各模式近期耗時調整；下列為上限，非固定每 tick 筆數。
+# 維護工作（/sign check、/sign refresh）每個 tick 的處理量。
+# 實際數量會依 TPS、tick 使用率與近期耗時自動調整；下列數值是上限，不是固定每 tick 筆數。
 maintenance:
+  # 一般模式（不帶 --force，只處理已載入區塊的告示牌）
   normal:
+    # 每個 tick 最多處理幾筆，可填 1 到 128 的整數
     max-records: 32
+    # 每個 tick 最多花費的毫秒數，可填 0.1 到 10 的數字
     budget-ms: 2
+    # 伺服器 TPS 低於此值時暫停處理，可填 0 到 20 的數字
     min-tps: 17
+  # 強制模式（帶 --force，會載入既有區塊，成本較高故預設較保守）
   force:
+    # 每個 tick 最多處理幾筆，可填 1 到 128 的整數
     max-records: 2
+    # 每個 tick 最多花費的毫秒數，可填 0.1 到 10 的數字
     budget-ms: 1
+    # 伺服器 TPS 低於此值時暫停處理，可填 0 到 20 的數字
     min-tps: 18

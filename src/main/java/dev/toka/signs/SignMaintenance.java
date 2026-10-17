@@ -69,10 +69,10 @@ final class SignMaintenance {
     private JsonObject result(JsonObject out,String status){out.addProperty("status",status);return out;}
     long start(String mode,Integer id,CommandSender actor,boolean force){
         if(!Set.of("check","refresh").contains(mode))throw new IllegalArgumentException("mode must be check or refresh");
-        if(!Main.permits(actor,mode))throw new IllegalArgumentException("沒有工作權限");
-        if(force&&!Main.permits(actor,"force"))throw new IllegalArgumentException("沒有強制載入權限");
-        if(job!=null&&job.state.equals("RUNNING"))throw new IllegalStateException("已有維護工作執行中，請查看 /sign jobs");
-        if(id!=null&&Main.getRegistry().byId(id).isEmpty())throw new IllegalArgumentException("找不到告示牌 ID");
+        if(!Main.permits(actor,mode))throw new IllegalArgumentException(Main.tr("err.ex.noJobPermission"));
+        if(force&&!Main.permits(actor,"force"))throw new IllegalArgumentException(Main.tr("err.ex.noForcePermission"));
+        if(job!=null&&job.state.equals("RUNNING"))throw new IllegalStateException(Main.tr("err.ex.jobRunning"));
+        if(id!=null&&Main.getRegistry().byId(id).isEmpty())throw new IllegalArgumentException(Main.tr("err.ex.signNotFound"));
         Job next=new Job();next.id=++sequence;next.mode=mode;next.owner=actor;next.force=force;
         next.total=id==null?Main.getRegistry().size():1;
         next.records=id==null?Main.getRegistry().maintenanceIterator():List.of(Main.getRegistry().byId(id).orElseThrow()).iterator();job=next;
@@ -101,7 +101,7 @@ final class SignMaintenance {
         }
         if(!job.records.hasNext())finish("DONE");
     }
-    private void finish(String state){job.state=state;job.records=Collections.emptyIterator();job.owner.sendMessage("[告示]維護工作 #"+job.id+" "+state+"："+job.done+"/"+job.total+"，更新 "+job.changed+"；/sign jobs 查看結果。");}
+    private void finish(String state){job.state=state;job.records=Collections.emptyIterator();job.owner.sendMessage(Main.tr("msg.jobFinished",job.id,state,job.done,job.total,job.changed));}
     String status(){
         var out=new JsonObject();if(job==null){out.addProperty("state","IDLE");return out.toString();}
         out.addProperty("waitingForPerformance",waiting&&job.state.equals("RUNNING"));out.addProperty("force",job.force);out.addProperty("jobId",job.id);out.addProperty("mode",job.mode);out.addProperty("state",job.state);

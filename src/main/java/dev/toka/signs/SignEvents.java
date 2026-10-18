@@ -51,7 +51,7 @@ public final class SignEvents implements Listener {
         if(!main.allowed(p,old==null?r:old,old==null?"create":"edit")||!main.allowed(p,r,old==null?"create":"edit")){p.sendMessage(Main.tr("err.noSetHere"));return;}
         String[] text=main.prepare(p,r,new String[]{"",code,"",""});if(text==null||text.length!=4){p.sendMessage(Main.tr("err.providerNotReady"));return;}
         var event=new SignChangeEvent(b,p,text);firePrepared(main,event);if(event.isCancelled())return;
-        main.getRegistry().upsert(r);sign.setText(event.getLines());p.sendMessage(Main.tr("msg.setDone"));
+        main.getRegistry().upsert(r);main.applySignText(sign,event.getLines());p.sendMessage(Main.tr("msg.setDone"));
     }
     @EventHandler public void form(PlayerFormRespondedEvent event){
         Player p=event.getPlayer();Pending pending=edits.get(p.getUniqueId());if(pending==null||event.getWindow()!=pending.form())return;edits.remove(p.getUniqueId());
@@ -65,6 +65,14 @@ public final class SignEvents implements Listener {
             String[] lines=new String[4];for(int i=0;i<4;i++){lines[i]=response.getInputResponse(i);if(lines[i]==null||lines[i].length()>2048)return;}
             var change=new SignChangeEvent(b,p,lines);main.getServer().getPluginManager().callEvent(change);if(!change.isCancelled())sign.setText(change.getLines());
         }catch(Exception|LinkageError error){main.getLogger().warning(Main.tr("log.formFailed",error.getClass().getSimpleName()));}
+    }
+    private void scheduleGlow(Block b){
+        String worldName=b.getLevel().getFolderName();int x=b.getFloorX(),y=b.getFloorY(),z=b.getFloorZ();
+        main.getServer().getScheduler().scheduleDelayedTask(main,new cn.nukkit.scheduler.Task(){public void onRun(int tick){
+            var world=main.getServer().getLevelByName(worldName);if(world==null||!world.isChunkLoaded(x>>4,z>>4))return;
+            var entity=world.getBlockEntity(new cn.nukkit.math.Vector3(x,y,z));
+            if(entity instanceof BlockEntitySign sign&&main.getRegistry().at(worldName,x,y,z).isPresent())main.applyGlow(sign);
+        }},1);
     }
     private SignRegistry.SignRecord record(Block b){return main.getRegistry().at(b.getLevel().getFolderName(),b.getFloorX(),b.getFloorY(),b.getFloorZ()).orElse(null);}
     private SignRegistry.SignRecord plain(Block b){return new SignRegistry.SignRecord(-1,b.getFloorX(),b.getFloorY(),b.getFloorZ(),b.getLevel().getFolderName(),0,null,null,0);}
@@ -99,7 +107,7 @@ public final class SignEvents implements Listener {
         var b=event.getBlock();var r=old==null?new SignRegistry.SignRecord(main.getRegistry().nextId(),b.getFloorX(),b.getFloorY(),b.getFloorZ(),b.getLevel().getFolderName(),type,event.getLine(1),null,-1):old;
         if(!main.canDefine(event.getPlayer(),r.type())||!main.allowed(event.getPlayer(),r,old==null?"create":"edit")){event.setCancelled();return;}
         // Managed edits go through providers; never silently convert a business sign to plain text.
-        try{String[] lines=main.prepare(event.getPlayer(),r,event.getLines().clone());if(lines==null||lines.length!=4){event.setCancelled();return;}main.getRegistry().upsert(r);for(int i=0;i<4;i++)event.setLine(i,lines[i]);}
+        try{String[] lines=main.prepare(event.getPlayer(),r,event.getLines().clone());if(lines==null||lines.length!=4){event.setCancelled();return;}main.getRegistry().upsert(r);for(int i=0;i<4;i++)event.setLine(i,lines[i]);scheduleGlow(b);}
         catch(Exception|LinkageError error){event.setCancelled();main.getLogger().warning(Main.tr("log.updateFailed",error.getClass().getSimpleName()));}
     }
     @EventHandler(priority=EventPriority.HIGHEST,ignoreCancelled=true)

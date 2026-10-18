@@ -20,7 +20,12 @@ messages:
   # 告示牌無法使用時，頂部訊息區（tokaDisplay）提示的停留秒數，可填 1 到 60 的整數。未安裝 tokaDisplay 時改用聊天室提示。
   use-failed-seconds: 5
 
-# 維護工作（/sign check、/sign refresh）每個 tick 的處理量。
+# 功能牌外觀。
+signs:
+  # 是否讓牌面文字在暗處保持清晰，沿用 zero signs.glow 的預設值。
+  glow: true
+
+# 維護工作（/sign check、/sign refresh、/sign repair）每個 tick 的處理量。
 # 實際數量會依 TPS、tick 使用率與近期耗時自動調整；下列數值是上限，不是固定每 tick 筆數。
 maintenance:
   # 一般模式（不帶 --force，只處理已載入區塊的告示牌）

@@ -84,7 +84,8 @@ public final class Main extends PluginBase {
         Main m=service();if(!permits(actor,"inspect"))throw new IllegalArgumentException(tr("err.ex.noInspectPermission"));
         return m.maintenance.inspect(id,actor,false,force).toString();
     }
-    public static long startMaintenance(String mode,Integer id,CommandSender actor,boolean force){return service().maintenance.start(mode,id,actor,force);}
+    public static long startMaintenance(String mode,Integer id,CommandSender actor,boolean force){return startMaintenance(mode,id,null,actor,force);}
+    public static long startMaintenance(String mode,Integer id,Integer type,CommandSender actor,boolean force){return service().maintenance.start(mode,id,type,actor,force);}
     public static String maintenanceStatus(CommandSender actor){if(!permits(actor,"jobs"))throw new IllegalArgumentException(tr("err.ex.noJobsPermission"));return service().maintenance.status();}
     public static boolean cancelMaintenance(CommandSender actor){if(!permits(actor,"jobs.cancel"))throw new IllegalArgumentException(tr("err.ex.noCancelPermission"));return service().maintenance.cancel();}
     static String tr(String key,Object... args){return instance==null||instance.messages==null?key:instance.messages.text(key,args);}
@@ -93,10 +94,10 @@ public final class Main extends PluginBase {
     static boolean permits(CommandSender sender,String operation){return sender.hasPermission("tokaSigns.admin")||sender.hasPermission("tokaSigns."+operation);}
     boolean canDefine(Player p,int type){return permits(p,"type."+type)&&definitions.containsKey(type);}
     public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
-        String op=args.length==0?"help":args[0].toLowerCase(Locale.ROOT);
-        if(!Set.of("help","status","edit","copy","paste","set","cancel","inspect","check","refresh","jobs").contains(op)){sender.sendMessage(messages.text("err.unknownCommand"));return true;}
+        String op=args.length==0?"help":args[0].toLowerCase(Locale.ROOT);if(op.equals("fix"))op="repair";
+        if(!Set.of("help","status","edit","copy","paste","set","cancel","inspect","check","refresh","repair","jobs").contains(op)){sender.sendMessage(messages.text("err.unknownCommand"));return true;}
         if(!permits(sender,op)){sender.sendMessage(messages.text("err.noPermission"));return true;}
-        if(Set.of("inspect","check","refresh","jobs").contains(op)){
+        if(Set.of("inspect","check","refresh","repair","jobs").contains(op)){
             try{
                 if(op.equals("jobs")){
                     if(args.length==2&&args[1].equalsIgnoreCase("cancel")){sender.sendMessage(messages.text("msg.jobCancelResult",yesNo(cancelMaintenance(sender))));return true;}
@@ -105,11 +106,11 @@ public final class Main extends PluginBase {
                     var samples=report.remove("samples");reply(sender,report.toString());
                     if(samples!=null)for(var sample:samples.getAsJsonArray()){var entry=sample.getAsJsonObject();sender.sendMessage(messages.text("msg.jobSample",entry.get("id"),entry.get("status").getAsString()));}return true;
                 }
-                if(args.length<2||args.length>3||(args.length==3&&!args[2].equals("--force")))throw new IllegalArgumentException(messages.text("err.usage",op.equals("inspect")?messages.text("cmd.sign.usageInspect"):messages.text("cmd.sign.usageMaint",op)));
-                Integer id=null;if(!args[1].equalsIgnoreCase("all")||op.equals("inspect")){try{id=Integer.valueOf(args[1]);}catch(NumberFormatException e){throw new IllegalArgumentException(messages.text("err.ex.badId"));}if(id<0)throw new IllegalArgumentException(messages.text("err.ex.badId"));}
+                if(args.length<2||args.length>3||(args.length==3&&!args[2].equals("--force")))throw new IllegalArgumentException(messages.text("err.usage",op.equals("inspect")?messages.text("cmd.sign.usageInspect"):op.equals("repair")?messages.text("cmd.sign.usageRepair"):messages.text("cmd.sign.usageMaint",op)));
+                Integer id=null,type=null;if(op.equals("repair")){type=SignTypeSelector.parse(args[1]);}else if(!args[1].equalsIgnoreCase("all")||op.equals("inspect")){try{id=Integer.valueOf(args[1]);}catch(NumberFormatException e){throw new IllegalArgumentException(messages.text("err.ex.badId"));}if(id<0)throw new IllegalArgumentException(messages.text("err.ex.badId"));}
                 boolean force=args.length==3;
                 if(op.equals("inspect")){reply(sender,inspectSign(id,sender,force));return true;}
-                sender.sendMessage(messages.text("msg.jobQueued",startMaintenance(op,id,sender,force)));
+                sender.sendMessage(messages.text("msg.jobQueued",startMaintenance(op,id,type,sender,force)));
             }catch(IllegalArgumentException|IllegalStateException e){reply(sender,e.getMessage());}return true;
         }
         if(!op.equals("set")&&args.length>1){sender.sendMessage(messages.text("err.noExtraArgs"));return true;}
@@ -140,6 +141,9 @@ public final class Main extends PluginBase {
             if(show)sender.sendMessage(line.substring(bar+1));
         }
     }
+    boolean glowEnabled(){return getConfig().getBoolean("signs.glow",true);}
+    void applyGlow(cn.nukkit.blockentity.BlockEntitySign sign){sign.setGlowing(glowEnabled());}
+    void applySignText(cn.nukkit.blockentity.BlockEntitySign sign,String[] lines){sign.setText(lines);applyGlow(sign);}
     private String[] statusLines(){return new String[]{messages.text("ui.statusSign.title"),messages.text("ui.statusSign.tps",String.format(Locale.ROOT,"%.1f",getServer().getTicksPerSecond())),messages.text("ui.statusSign.load",String.format(Locale.ROOT,"%.1f",getServer().getTickUsage())),messages.text("ui.statusSign.net",String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getUpload()),String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getDownload()))};}
     private void updateStatusSigns(){
         if(!ownsEvents())return;
@@ -148,7 +152,7 @@ public final class Main extends PluginBase {
             var world=getServer().getLevelByName(r.world());
             if(world==null||!world.isChunkLoaded(r.x()>>4,r.z()>>4))continue;
             var entity=world.getBlockEntity(new cn.nukkit.math.Vector3(r.x(),r.y(),r.z()));
-            if(entity instanceof cn.nukkit.blockentity.BlockEntitySign sign)try{sign.setText(statusLines());}catch(RuntimeException error){getLogger().warning(messages.text("log.statusUpdateFailed",r.id()));}
+            if(entity instanceof cn.nukkit.blockentity.BlockEntitySign sign)try{applySignText(sign,statusLines());}catch(RuntimeException error){getLogger().warning(messages.text("log.statusUpdateFailed",r.id()));}
         }
     }
     public void onDisable(){if(maintenance!=null)maintenance.close();instance=null;actions.clear();definitions.clear();SignEvents.clear();policy=null;if(registry!=null)try{registry.close();}catch(Exception error){getLogger().warning(messages.text("log.storageCloseFailed"));}}

@@ -8,6 +8,7 @@
 - **編輯牌面**：點選告示牌後編輯文字或功能代碼。
 - **功能牌**：在告示牌上寫入類型與代碼，玩家點一下就能執行，例如傳送到區域、前往公共傳送點、購買或回收商品、開啟物品管理、顯示伺服器狀態。實際動作由對應插件提供。
 - **維護檢查與修復**：`/sign check`、`/sign refresh`、`/sign repair` 以佇列分批檢查或重繪功能牌，依伺服器負載調整速度；修復可選類別或 `all`，並校正牌面文字與發光狀態。
+  牌面更新會使用 provider 提供的「使用後」內容（最新區域、傳送點或商品資訊）；沒有專用更新格式時沿用新建牌面。
 
 ### Bedrock 指令候選
 
@@ -71,7 +72,7 @@
 | --- | --- | --- |
 | `registerPolicy` / `unregisterPolicy` | 擁有者名稱、`Policy` | 提供保護判斷（允許、拒絕、尚未就緒），沒有 Policy 時功能牌動作會被拒絕 |
 | `registerAction` / `unregisterAction` | 類型 ID、`Action` | 提供該類型功能牌被點擊時的動作 |
-| `registerDefinition` / `unregisterDefinition` | 類型 ID、`Definition` | 提供該類型建立／編輯時的牌面內容 |
+| `registerDefinition` / `unregisterDefinition` | 類型 ID、`Definition` | 提供建立／編輯牌面，並可另提供維護更新後的牌面內容 |
 | `serviceReady` | 無 | 確認本插件已就緒 |
 | `isActionsEnabled` | 無 | 目前是否由本插件接管事件 |
 

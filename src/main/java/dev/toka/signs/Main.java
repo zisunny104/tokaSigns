@@ -12,7 +12,7 @@ public final class Main extends PluginBase {
     public enum Decision { ALLOW,DENY,UNAVAILABLE }
     public interface Policy { Decision authorize(Player player,SignRegistry.SignRecord sign,String operation); }
     public interface Action { boolean execute(Player player,SignRegistry.SignRecord sign); }
-    public interface Definition { String[] prepare(Player player,SignRegistry.SignRecord sign,String[] lines); }
+    public interface Definition { String[] prepare(Player player,SignRegistry.SignRecord sign,String[] lines); default String[] prepareRefresh(Player player,SignRegistry.SignRecord sign,String[] lines){return prepare(player,sign,lines);} }
     private static Main instance;
     private SignRegistry registry;
     private SignMaintenance maintenance;
@@ -85,6 +85,7 @@ public final class Main extends PluginBase {
         catch(Exception|LinkageError error){getLogger().warning(tr("log.policyFailed",error.getClass().getSimpleName()));return false;}
     }
     String[] prepare(Player p,SignRegistry.SignRecord r,String[] lines){var d=definitions.get(r.type());return d==null?null:d.prepare(p,r,lines);}
+    String[] prepareRefresh(Player p,SignRegistry.SignRecord r,String[] lines){var d=definitions.get(r.type());return d==null?null:d.prepareRefresh(p,r,lines);}
     public static boolean activate(Player player,SignRegistry.SignRecord sign){
         Main m=service();if(!m.ownsEvents()||!m.allowed(player,sign,"activate"))return false;
         Action a=m.actions.get(sign.type());return a!=null&&a.execute(player,sign);

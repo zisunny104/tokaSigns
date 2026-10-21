@@ -47,10 +47,15 @@ final class SignMaintenance {
         if(!main.hasDefinition(r.type()))return result(out,"DEFINITION_UNAVAILABLE");
         Player player=actor instanceof Player p?p:null;
         try {
-            String[] expected=main.prepare(player,r,new String[]{"",r.code()==null?"":r.code(),"",""});
-            if(expected==null||expected.length!=4||Arrays.stream(expected).anyMatch(Objects::isNull))return result(out,"REFERENCE_UNAVAILABLE");
-            out.add("expectedText",GSON.toJsonTree(expected));
-            boolean textMatches=Arrays.equals(before,expected),glowMatches=beforeGlowing==expectedGlowing;if(textMatches&&glowMatches)return result(out,"MATCH");
+            String[] input={"",r.code()==null?"":r.code(),"",""};
+            String[] created=main.prepare(player,r,input);
+            if(!validText(created))return result(out,"REFERENCE_UNAVAILABLE");
+            String[] refreshed=main.prepareRefresh(player,r,input);
+            if(refresh&&!validText(refreshed))return result(out,"REFERENCE_UNAVAILABLE");
+            String[] expected=refresh?refreshed:created;
+            out.add("expectedText",GSON.toJsonTree(created));
+            if(validText(refreshed))out.add("expectedRefreshText",GSON.toJsonTree(refreshed));
+            boolean textMatches=Arrays.equals(before,expected)||(!refresh&&validText(refreshed)&&Arrays.equals(before,refreshed)),glowMatches=beforeGlowing==expectedGlowing;if(textMatches&&glowMatches)return result(out,"MATCH");
             if(!refresh)return result(out,textMatches?"STYLE_DIFFERS":"TEXT_DIFFERS");
             if(!Main.permits(actor,"type."+r.type())||!main.hasPolicy())return result(out,"DENIED");
             if(player!=null&&(!player.isOnline()||!main.allowed(player,r,"edit")))return result(out,"DENIED");
@@ -67,6 +72,7 @@ final class SignMaintenance {
             return result(out,Arrays.equals(expected,sign.getText())&&sign.isGlowing()==expectedGlowing?"UPDATED":"UPDATE_REJECTED");
         }catch(Exception|LinkageError error){out.addProperty("error",error.getClass().getSimpleName());return result(out,"PROVIDER_ERROR");}
     }
+    private static boolean validText(String[] lines){return lines!=null&&lines.length==4&&Arrays.stream(lines).noneMatch(Objects::isNull);}
     private JsonObject result(JsonObject out,String status){out.addProperty("status",status);return out;}
     long start(String mode,Integer id,CommandSender actor,boolean force){return start(mode,id,null,actor,force);}
     long start(String mode,Integer id,Integer type,CommandSender actor,boolean force){

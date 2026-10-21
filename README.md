@@ -77,7 +77,7 @@
 | `serviceReady` | 無 | 確認本插件已就緒 |
 | `isActionsEnabled` | 無 | 目前是否由本插件接管事件 |
 
-`DisplayDataProvider.resolve` 回傳 JSON 字串。傳送類型 10、11 使用 `name`、`info`；購買／回收類型 31、32 使用 `itemName`、`quantity`、`amount`。provider 只負責提供仍由其他插件管理的資料，不應回傳已排版的告示牌文字。類型 33 的物品管理牌面由 tokaSigns 直接產生。Zero 可暫時提供區域、傳送點及商店資料與動作，但不再擁有告示牌樣式。
+`DisplayDataProvider.resolve` 回傳 JSON 字串。傳送類型 10、11 使用 `info`；購買／回收類型 31、32 使用 `itemName`、`quantity`、`amount`。provider 只負責提供仍由其他插件管理的資料，不應回傳已排版的告示牌文字。tokaSigns 產生與舊版成功使用後相同的動態版型，修復時也會重新讀取 provider 資料。類型 33 的物品管理牌面由 tokaSigns 直接產生。Zero 可暫時提供區域、傳送點及商店資料與動作，但不再擁有告示牌樣式。
 
 ## 疑難排解
 

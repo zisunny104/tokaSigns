@@ -4,12 +4,12 @@ version: "0.4.6"
 api: ["1.0.4"]
 author: zisunny104
 softdepend: [zero, tokaDisplay]
-description: Nukkit 告示牌管理：複製貼上、編輯、功能牌設定與維護檢查
+description: Nukkit 告示牌管理：功能牌設定、維護檢查與修復
 commands:
   sign:
     aliases: [signs]
     description: 告示牌管理與複製貼上
-    usage: "/sign <help|status|edit|copy|paste|set|cancel|inspect|check|refresh|jobs> [參數]（/sign help 查看完整說明）"
+    usage: "/sign <help|status|edit|copy|paste|set|cancel|inspect|check|refresh|repair|fix|jobs> [參數]（/sign help 查看完整說明）"
 permissions:
   tokaSigns.admin:
     description: 告示牌整體管理權限，視為擁有下列所有權限
@@ -73,6 +73,9 @@ permissions:
     default: op
   tokaSigns.refresh:
     description: 使用 /sign refresh 分批依設定更新牌面
+    default: op
+  tokaSigns.repair:
+    description: 使用 /sign repair 分批檢查並修復功能牌文字與發光狀態
     default: op
   tokaSigns.jobs:
     description: 使用 /sign jobs 查看維護工作進度

@@ -1,13 +1,17 @@
 # tokaSigns
 
-告示牌管理插件：管理員可複製貼上告示牌文字、編輯牌面、建立點一下就能傳送或交易的功能牌，並批次檢查與更新全服告示牌。指令為 `/sign`（別名 `/signs`）。
+告示牌複製貼上、編輯、功能牌設定、批次檢查與重繪。使用 `/sign` 或 `/signs` 操作。
 
 ## 主要功能
 
 - **複製貼上**：複製一般告示牌的四行文字，貼到其他告示牌上。
-- **編輯牌面**：點選告示牌後用表單修改；一般牌改四行文字，功能牌改代碼。
+- **編輯牌面**：點選告示牌後編輯文字或功能代碼。
 - **功能牌**：在告示牌上寫入類型與代碼，玩家點一下就能執行，例如傳送到區域、前往公共傳送點、購買或回收商品、開啟物品管理、顯示伺服器狀態。實際動作由對應插件提供。
-- **維護檢查**：分批檢查或重繪全服告示牌，依伺服器負載自動調整速度，不會造成卡頓。
+- **維護檢查與修復**：`/sign check`、`/sign refresh`、`/sign repair` 以佇列分批檢查或重繪功能牌，依伺服器負載調整速度；修復可選類別或 `all`，並校正牌面文字與發光狀態。
+
+### Bedrock 指令候選
+
+遊戲輸入 `/sign` 後，第一個參數會顯示本插件支援的子指令候選，包含 `repair` 與別名 `fix`。候選只協助輸入；伺服器仍會逐項檢查權限。其他參數依指令用法輸入。
 
 ## 玩家指令
 
@@ -17,8 +21,8 @@
 
 | 指令 | 用法 | 說明 | 權限 |
 | --- | --- | --- | --- |
-| `/sign help` | `/sign help` | 顯示說明 | `tokaSigns.help`（所有人） |
-| `/sign cancel` | `/sign cancel` | 取消操作，保留剪貼簿 | `tokaSigns.cancel`（所有人） |
+| `/sign help` | `/sign help` | 顯示說明 | `tokaSigns.help`，所有人 |
+| `/sign cancel` | `/sign cancel` | 取消操作，保留剪貼簿 | `tokaSigns.cancel`，所有人 |
 | `/sign status` | `/sign status` | 登記數、事件接管與保護服務狀態 | `tokaSigns.status` |
 | `/sign edit` | `/sign edit` | 點選告示牌後編輯 | `tokaSigns.edit` |
 | `/sign copy` | `/sign copy` | 點選一般告示牌複製文字 | `tokaSigns.copy` |
@@ -26,14 +30,15 @@
 | `/sign set` | `/sign set <類型名稱或ID> <代碼>` | 點選告示牌設為功能牌；代碼不可含空白，狀態牌填 `-` | `tokaSigns.set` 及 `tokaSigns.type.<ID>` |
 | `/sign inspect` | `/sign inspect <ID> [--force]` | 對照單一告示牌的位置、牌面與功能設定 | `tokaSigns.inspect` |
 | `/sign check` | `/sign check <ID｜all> [--force]` | 分批唯讀檢查 | `tokaSigns.check` |
-| `/sign refresh` | `/sign refresh <ID｜all> [--force]` | 分批依設定更新牌面 | `tokaSigns.refresh` |
+| `/sign refresh` | `/sign refresh <ID｜all> [--force]` | 分批依設定更新牌面文字與發光狀態 | `tokaSigns.refresh` |
+| `/sign repair`、`/sign fix` | `/sign repair <類別｜all> [--force]` | 排隊檢查並修復指定類別或全部功能牌 | `tokaSigns.repair`，預設 OP |
 | `/sign jobs` | `/sign jobs [cancel]` | 查看維護進度／取消後續處理 | `tokaSigns.jobs`、`tokaSigns.jobs.cancel` |
+
+修復類別可填 `tpr`、`tpp`、`tpl`、`tps`、`pay`、`buy`、`sell`、`item`、`status` 或類型 ID；`all` 會檢查所有已登記功能牌。
 
 除標示「所有人」者，權限預設皆為 OP；`tokaSigns.admin` 視為擁有全部權限。`--force` 會載入既有區塊，另需 `tokaSigns.force`；破壞功能牌需 `tokaSigns.break`。
 
-也可以直接在告示牌上寫四行建立功能牌（外框與 `|` 不用輸入，「留空」就不填字）：
-
-（圖：寫好四行的功能告示牌範例）
+也可以依下表填寫告示牌建立功能牌，「留空」欄位不需填字：
 
 | 第 1 行 | 第 2 行 | 類型 | 權限 |
 | --- | --- | --- | --- |
@@ -44,12 +49,15 @@
 | `item` | 留空 | 物品管理入口 | `tokaSigns.type.33` |
 | `status` | 留空 | 伺服器狀態 | `tokaSigns.type.41` |
 
-## 設定（`config.yml`，變更後需重新啟動）
+## 設定 config.yml
+
+變更後需重新啟動。
 
 | key | 預設 | 說明 |
 | --- | --- | --- |
 | `actions.enabled` | `true` | 是否由本插件接管告示牌的點擊、建立、編輯與破壞；zero 的 sign 模組仍啟用時不會接管 |
 | `messages.use-failed-seconds` | `5` | 告示牌無法使用時，tokaDisplay 頂部訊息的停留秒數（1–60）；未安裝 tokaDisplay 時改用聊天室，同一玩家 2 秒內只提示一次 |
+| `signs.glow` | `true` | 讓功能牌文字在暗處保持清晰；修復工作也會檢查並校正此狀態 |
 | `maintenance.normal.max-records` | `32` | 一般維護每 tick 最多處理幾筆（1–128） |
 | `maintenance.normal.budget-ms` | `2` | 一般維護每 tick 最多花費毫秒 |
 | `maintenance.normal.min-tps` | `17` | TPS 低於此值就暫停維護 |
@@ -71,11 +79,3 @@
 
 - **功能牌點了沒反應？** 用 `/sign status` 確認事件接管為是、保護服務已就緒，且該類型的插件已啟用。
 - **看不到某個類型可以設定？** 需要該類型的 `tokaSigns.type.<ID>` 權限，且提供該類型的插件已就緒。
-
-目前版本 0.4.5
-
-### Bedrock 指令候選
-
-遊戲輸入 /sign 後，第一個參數會顯示本插件支援的子指令候選。候選只協助輸入；伺服器仍會逐項檢查權限。參數值目前由一般用法說明引導。
-
-維護工作 efresh 目前只重建登記記錄所定義的四行文字；它不會猜測或更改告示牌文字色彩、發光等 NBT 樣式。

@@ -23,6 +23,8 @@ cmd:
     usageInspect: "/sign inspect <非負整數ID> [--force]"
     # /sign check、/sign refresh 的用法；${0}＝子指令名稱（check 或 refresh）
     usageMaint: "/sign ${0} <非負整數ID|all> [--force]"
+    # /sign repair、/sign fix 的用法
+    usageRepair: "/sign repair <類別名稱或ID|all> [--force]"
     # /sign jobs 的用法
     usageJobs: "/sign jobs [cancel]"
 
@@ -40,7 +42,8 @@ help:
     - "status|§e/sign status §7- §b登記數、事件接管及保護 provider"
     - "inspect|§e/sign inspect <ID> [--force] §7- §b位置、牌面與功能設定對照"
     - "check|§e/sign check <ID|all> [--force] §7- §b分批唯讀檢查"
-    - "refresh|§e/sign refresh <ID|all> [--force] §7- §b分批依設定更新牌面，不修復 NBT"
+    - "refresh|§e/sign refresh <ID|all> [--force] §7- §b分批依設定重繪牌面文字與發光狀態"
+    - "repair|§e/sign repair <類別|all> [--force] §7- §b檢查並修復指定類別或全部功能牌文字與發光狀態，也可用 /sign fix"
     - "jobs|§e/sign jobs §7- §b查看進度與統計"
     - "jobs.cancel|§e/sign jobs cancel §7- §b取消後續處理（不回復已更新的牌面）"
     - "force|§e--force §7- §b可載入既有區塊（依效能動態分批）；不產生新區塊，不略過權限"
@@ -115,6 +118,7 @@ err:
     jobRunning: "§c已有維護工作執行中（§e/sign jobs§c）"
     signNotFound: "§c找不到告示牌 ID"
     badId: "§cID 必須為非負整數。"
+    badType: "§c類別請填 tpr、tpp、tpl、tps、pay、buy、sell、item、status、類型 ID 或 all。"
   # 直接填寫四行時的檢查結果（SignInput 回傳這些 key）
   input:
     fourLines: "§7[告示]§r §c需要四行文字。"

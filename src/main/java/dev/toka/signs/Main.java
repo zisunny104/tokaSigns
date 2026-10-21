@@ -43,8 +43,14 @@ public final class Main extends PluginBase {
         cn.nukkit.command.Command registered=(cn.nukkit.command.Command)command;
         registered.getCommandParameters().clear();
         registered.addCommandParameters("default",new CommandParameter[]{
-            CommandParameter.newEnum("action",new String[]{"help","status","edit","copy","paste","set","cancel","inspect","check","refresh","repair","fix","jobs"}),
+            CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsAction",new String[]{"help","status","edit","copy","paste","set","cancel","inspect","check","refresh","repair","fix","jobs"})),
             CommandParameter.newType("arguments",true,cn.nukkit.command.data.CommandParamType.RAWTEXT)
+        });
+        // Plugin reloads do not automatically refresh Bedrock's cached command list.
+        getServer().getScheduler().scheduleTask(this,new cn.nukkit.scheduler.Task(){
+            public void onRun(int tick){
+                for(Player player:getServer().getOnlinePlayers().values())player.sendCommandData();
+            }
         });
     }
     private static Main service(){

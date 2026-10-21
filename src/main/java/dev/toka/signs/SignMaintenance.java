@@ -67,7 +67,8 @@ final class SignMaintenance {
                 expected=change.getLines();
             }
             if(!Objects.equals(Main.getRegistry().byId(id).orElse(null),r)||world.getBlockEntity(pos)!=sign||!Arrays.equals(before,sign.getText()))return result(out,"CHANGED_DURING_CHECK");
-            if(!textMatches)sign.setText(expected);sign.setGlowing(expectedGlowing);
+            sign.setGlowing(expectedGlowing);
+            if(!textMatches)sign.setText(expected);else sign.spawnToAll();
             out.add("afterText",GSON.toJsonTree(sign.getText()));out.addProperty("afterGlowing",sign.isGlowing());
             return result(out,Arrays.equals(expected,sign.getText())&&sign.isGlowing()==expectedGlowing?"UPDATED":"UPDATE_REJECTED");
         }catch(Exception|LinkageError error){out.addProperty("error",error.getClass().getSimpleName());return result(out,"PROVIDER_ERROR");}

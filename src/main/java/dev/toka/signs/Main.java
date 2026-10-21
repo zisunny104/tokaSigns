@@ -178,8 +178,8 @@ public final class Main extends PluginBase {
         }
     }
     boolean glowEnabled(){return getConfig().getBoolean("signs.glow",true);}
-    void applyGlow(cn.nukkit.blockentity.BlockEntitySign sign){sign.setGlowing(glowEnabled());}
-    void applySignText(cn.nukkit.blockentity.BlockEntitySign sign,String[] lines){sign.setText(lines);applyGlow(sign);}
+    void applyGlow(cn.nukkit.blockentity.BlockEntitySign sign){sign.setGlowing(glowEnabled());sign.spawnToAll();}
+    void applySignText(cn.nukkit.blockentity.BlockEntitySign sign,String[] lines){sign.setGlowing(glowEnabled());sign.setText(lines);}
     private String[] statusLines(){return new String[]{messages.text("ui.statusSign.title"),messages.text("ui.statusSign.tps",String.format(Locale.ROOT,"%.1f",getServer().getTicksPerSecond())),messages.text("ui.statusSign.load",String.format(Locale.ROOT,"%.1f",getServer().getTickUsage())),messages.text("ui.statusSign.net",String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getUpload()),String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getDownload()))};}
     private void updateStatusSigns(){
         if(!ownsEvents())return;

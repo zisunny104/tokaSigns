@@ -3,6 +3,7 @@ package dev.toka.signs;
 import cn.nukkit.Player;
 import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.command.*;
+import cn.nukkit.command.data.CommandParameter;
 import dev.toka.storage.*;
 import dev.toka.i18n.Messages;
 import java.util.*;
@@ -35,7 +36,16 @@ public final class Main extends PluginBase {
             getLogger().info(messages.text("log.loaded",registry.records().size()));
         }catch(Exception error){getLogger().error(messages.text("log.storageFailed"));throw new IllegalStateException("Sign storage could not be loaded; keep the original data",error);}
     }
-    private static Main service(){
+    private void configureCommandSuggestions(){
+        var command=getCommand("sign");
+        if(command==null){getLogger().warning("無法設定 /sign 的指令候選。");return;}
+        cn.nukkit.command.Command registered=(cn.nukkit.command.Command)command;
+        registered.getCommandParameters().clear();
+        registered.addCommandParameters("default",new CommandParameter[]{
+            CommandParameter.newEnum("action",new String[]{"help","status","edit","copy","paste","set","cancel","inspect","check","refresh","jobs"}),
+            CommandParameter.newType("arguments",true,cn.nukkit.command.data.CommandParamType.RAWTEXT)
+        });
+    }    private static Main service(){
         if(instance==null||!instance.isEnabled())throw new IllegalStateException("tokaSigns unavailable");
         if(!instance.getServer().isPrimaryThread())throw new IllegalStateException("Sign API requires server thread");
         return instance;

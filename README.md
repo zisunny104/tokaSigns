@@ -72,9 +72,12 @@
 | --- | --- | --- |
 | `registerPolicy` / `unregisterPolicy` | 擁有者名稱、`Policy` | 提供保護判斷（允許、拒絕、尚未就緒），沒有 Policy 時功能牌動作會被拒絕 |
 | `registerAction` / `unregisterAction` | 類型 ID、`Action` | 提供該類型功能牌被點擊時的動作 |
-| `registerDefinition` / `unregisterDefinition` | 類型 ID、`Definition` | 提供建立／編輯牌面，並可另提供維護更新後的牌面內容 |
+| `registerDisplayDataProvider` / `unregisterDisplayDataProvider` | 類型 ID、`DisplayDataProvider` | 提供 JSON 業務資料；牌面文字與色碼由 tokaSigns 按舊版格式產生 |
+| `registerDefinition` / `unregisterDefinition` | 類型 ID、`Definition` | 相容舊版或自訂功能牌格式；內建類型 10、11、31、32、33 由 tokaSigns 格式器優先處理 |
 | `serviceReady` | 無 | 確認本插件已就緒 |
 | `isActionsEnabled` | 無 | 目前是否由本插件接管事件 |
+
+`DisplayDataProvider.resolve` 回傳 JSON 字串。傳送類型 10、11 使用 `name`、`info`；購買／回收類型 31、32 使用 `itemName`、`quantity`、`amount`。provider 只負責提供仍由其他插件管理的資料，不應回傳已排版的告示牌文字。類型 33 的物品管理牌面由 tokaSigns 直接產生。Zero 可暫時提供區域、傳送點及商店資料與動作，但不再擁有告示牌樣式。
 
 ## 疑難排解
 

@@ -13,6 +13,8 @@ public final class Main extends PluginBase {
     public interface Policy { Decision authorize(Player player,SignRegistry.SignRecord sign,String operation); }
     public interface Action { boolean execute(Player player,SignRegistry.SignRecord sign); }
     public interface Definition { String[] prepare(Player player,SignRegistry.SignRecord sign,String[] lines); default String[] prepareRefresh(Player player,SignRegistry.SignRecord sign,String[] lines){return prepare(player,sign,lines);} }
+    /** Optional business data source. Presentation and legacy sign wording stay in tokaSigns. */
+    public interface DisplayDataProvider { String resolve(Player player,SignRegistry.SignRecord sign); }
     private static Main instance;
     private SignRegistry registry;
     private SignMaintenance maintenance;
@@ -22,6 +24,7 @@ public final class Main extends PluginBase {
     private String policyOwner;
     private final Map<Integer,Action> actions=new HashMap<>();
     private final Map<Integer,Definition> definitions=new HashMap<>();
+    private final Map<Integer,DisplayDataProvider> displayDataProviders=new HashMap<>();
     public void onEnable(){
         saveDefaultConfig();
         configureCommandSuggestions();
@@ -76,6 +79,11 @@ public final class Main extends PluginBase {
     public static void unregisterAction(int type){service().actions.remove(type);}
     public static void registerDefinition(int type,Definition definition){if(service().definitions.putIfAbsent(type,Objects.requireNonNull(definition))!=null)throw new IllegalStateException("Definition already registered");}
     public static void unregisterDefinition(int type){service().definitions.remove(type);}
+    public static void registerDisplayDataProvider(int type,DisplayDataProvider provider){
+        Main main=service();if(!SignTextFormatter.supports(type)||type==33)throw new IllegalArgumentException("No external display data is used for type "+type);
+        if(main.displayDataProviders.putIfAbsent(type,Objects.requireNonNull(provider))!=null)throw new IllegalStateException("Display data provider already registered");
+    }
+    public static void unregisterDisplayDataProvider(int type){service().displayDataProviders.remove(type);}
     boolean ownsEvents(){
         if(!getConfig().getBoolean("actions.enabled",true))return false;
         var zero=getServer().getPluginManager().getPlugin("zero");
@@ -90,13 +98,21 @@ public final class Main extends PluginBase {
         try{return policy!=null&&policy.authorize(p,sign,operation)==Decision.ALLOW;}
         catch(Exception|LinkageError error){getLogger().warning(tr("log.policyFailed",error.getClass().getSimpleName()));return false;}
     }
-    String[] prepare(Player p,SignRegistry.SignRecord r,String[] lines){var d=definitions.get(r.type());return d==null?null:d.prepare(p,r,lines);}
-    String[] prepareRefresh(Player p,SignRegistry.SignRecord r,String[] lines){var d=definitions.get(r.type());return d==null?null:d.prepareRefresh(p,r,lines);}
+    private String[] format(SignRegistry.SignRecord r,Player p){
+        if(!SignTextFormatter.supports(r.type()))return null;
+        if(r.type()==33)return SignTextFormatter.format(r,null);
+        var provider=displayDataProviders.get(r.type());
+        if(provider!=null){String json=provider.resolve(p,r);return json==null?null:SignTextFormatter.format(r,com.google.gson.JsonParser.parseString(json).getAsJsonObject());}
+        // Compatibility for third-party providers using the former formatted-lines API.
+        var legacy=definitions.get(r.type());return legacy==null?null:legacy.prepare(p,r,new String[]{"",r.code(),"",r.info()});
+    }
+    String[] prepare(Player p,SignRegistry.SignRecord r,String[] lines){String[] canonical=format(r,p);if(canonical!=null)return canonical;var d=definitions.get(r.type());return d==null?null:d.prepare(p,r,lines);}
+    String[] prepareRefresh(Player p,SignRegistry.SignRecord r,String[] lines){String[] canonical=format(r,p);if(canonical!=null)return canonical;var d=definitions.get(r.type());return d==null?null:d.prepareRefresh(p,r,lines);}
     public static boolean activate(Player player,SignRegistry.SignRecord sign){
         Main m=service();if(!m.ownsEvents()||!m.allowed(player,sign,"activate"))return false;
         Action a=m.actions.get(sign.type());return a!=null&&a.execute(player,sign);
     }
-    boolean hasDefinition(int type){return definitions.containsKey(type);}
+    boolean hasDefinition(int type){return type==41||type==33||displayDataProviders.containsKey(type)||definitions.containsKey(type);}
     boolean hasPolicy(){return policy!=null;}
     /** Single-record inspection; force may synchronously load one existing chunk. Prefer jobs for bulk work. */
     public static String inspectSign(int id,CommandSender actor,boolean force){
@@ -111,7 +127,7 @@ public final class Main extends PluginBase {
     private String yesNo(boolean value){return messages.text(value?"status.yes":"status.no");}
     private void reply(CommandSender sender,String text){sender.sendMessage(messages.text("msg.reply",text));}
     static boolean permits(CommandSender sender,String operation){return sender.hasPermission("tokaSigns.admin")||sender.hasPermission("tokaSigns."+operation);}
-    boolean canDefine(Player p,int type){return permits(p,"type."+type)&&definitions.containsKey(type);}
+    boolean canDefine(Player p,int type){return permits(p,"type."+type)&&hasDefinition(type);}
     public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
         String op=args.length==0?"help":args[0].toLowerCase(Locale.ROOT);if(op.equals("fix"))op="repair";
         if(!Set.of("help","status","edit","copy","paste","set","cancel","inspect","check","refresh","repair","jobs").contains(op)){sender.sendMessage(messages.text("err.unknownCommand"));return true;}
@@ -146,7 +162,8 @@ public final class Main extends PluginBase {
     }
     /** Lines of help.sign look like "tag|text"; the tag decides who sees the line (see lang/zh-TW.yml). */
     private void sendHelp(CommandSender sender){
-        var types=new TreeSet<Integer>();for(int type:definitions.keySet())if(permits(sender,"type."+type))types.add(type);
+        var types=new TreeSet<Integer>(definitions.keySet());types.addAll(displayDataProviders.keySet());types.add(33);
+        types.removeIf(type->!hasDefinition(type)||!permits(sender,"type."+type));
         for(String line:messages.lines("help.sign",types)){
             int bar=line.indexOf('|');if(bar<0){sender.sendMessage(line);continue;}
             String tag=line.substring(0,bar);boolean playerOnly=tag.startsWith("p:");if(playerOnly)tag=tag.substring(2);
@@ -155,7 +172,7 @@ public final class Main extends PluginBase {
             if(tag.equals("*"))show=true;
             else if(tag.startsWith("type.")){
                 int type;try{type=Integer.parseInt(tag.substring(5));}catch(NumberFormatException e){continue;}
-                show=permits(sender,"set")&&definitions.containsKey(type)&&permits(sender,tag);
+                show=permits(sender,"set")&&hasDefinition(type)&&permits(sender,tag);
             }else show=permits(sender,tag);
             if(show)sender.sendMessage(line.substring(bar+1));
         }
@@ -174,7 +191,7 @@ public final class Main extends PluginBase {
             if(entity instanceof cn.nukkit.blockentity.BlockEntitySign sign)try{applySignText(sign,statusLines());}catch(RuntimeException error){getLogger().warning(messages.text("log.statusUpdateFailed",r.id()));}
         }
     }
-    public void onDisable(){if(maintenance!=null)maintenance.close();instance=null;actions.clear();definitions.clear();SignEvents.clear();policy=null;if(registry!=null)try{registry.close();}catch(Exception error){getLogger().warning(messages.text("log.storageCloseFailed"));}}
+    public void onDisable(){if(maintenance!=null)maintenance.close();instance=null;actions.clear();definitions.clear();displayDataProviders.clear();SignEvents.clear();policy=null;if(registry!=null)try{registry.close();}catch(Exception error){getLogger().warning(messages.text("log.storageCloseFailed"));}}
 }
 
 

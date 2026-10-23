@@ -55,7 +55,10 @@ final class SignMaintenance {
             String[] expected=refresh?refreshed:created;
             out.add("expectedText",GSON.toJsonTree(created));
             if(validText(refreshed))out.add("expectedRefreshText",GSON.toJsonTree(refreshed));
-            boolean textMatches=Arrays.equals(before,expected)||(!refresh&&validText(refreshed)&&Arrays.equals(before,refreshed)),glowMatches=beforeGlowing==expectedGlowing;if(textMatches&&glowMatches)return result(out,"MATCH");
+            boolean textMatches=Arrays.equals(before,expected)||(!refresh&&validText(refreshed)&&Arrays.equals(before,refreshed)),glowMatches=beforeGlowing==expectedGlowing;
+            // Maintenance is also an explicit client resynchronization request. A matching server-side
+            // state does not establish that the client received the latest text/glow packet.
+            if(!refresh&&textMatches&&glowMatches)return result(out,"MATCH");
             if(!refresh)return result(out,textMatches?"STYLE_DIFFERS":"TEXT_DIFFERS");
             if(!Main.permits(actor,"type."+r.type())||!main.hasPolicy())return result(out,"DENIED");
             if(player!=null&&(!player.isOnline()||!main.allowed(player,r,"edit")))return result(out,"DENIED");
@@ -68,9 +71,11 @@ final class SignMaintenance {
             }
             if(!Objects.equals(Main.getRegistry().byId(id).orElse(null),r)||world.getBlockEntity(pos)!=sign||!Arrays.equals(before,sign.getText()))return result(out,"CHANGED_DURING_CHECK");
             sign.setGlowing(expectedGlowing);
-            if(!textMatches)sign.setText(expected);else sign.spawnToAll();
+            if(!Arrays.equals(expected,sign.getText()))sign.setText(expected);
+            // Always resend, including when setText is a no-op or another update only changed glow.
+            sign.spawnToAll();
             out.add("afterText",GSON.toJsonTree(sign.getText()));out.addProperty("afterGlowing",sign.isGlowing());
-            return result(out,Arrays.equals(expected,sign.getText())&&sign.isGlowing()==expectedGlowing?"UPDATED":"UPDATE_REJECTED");
+            return result(out,Arrays.equals(expected,sign.getText())&&sign.isGlowing()==expectedGlowing?(textMatches&&glowMatches?"RESENT":"UPDATED"):"UPDATE_REJECTED");
         }catch(Exception|LinkageError error){out.addProperty("error",error.getClass().getSimpleName());return result(out,"PROVIDER_ERROR");}
     }
     private static boolean validText(String[] lines){return lines!=null&&lines.length==4&&Arrays.stream(lines).noneMatch(Objects::isNull);}
@@ -107,12 +112,12 @@ final class SignMaintenance {
             catch(Exception|LinkageError error){report=result(new JsonObject(),"INSPECTION_ERROR");report.addProperty("id",r.id());}
             pacing.observe(job.force,System.nanoTime()-recordStart);
             String status=report.get("status").getAsString();job.done++;job.counts.merge(status,1,Integer::sum);
-            if(status.equals("UPDATED"))job.changed++;
-            if(!status.equals("MATCH")&&job.samples.size()<20)job.samples.add(report);
+            if(status.equals("UPDATED")||status.equals("RESENT"))job.changed++;
+            if(!status.equals("MATCH")&&!status.equals("RESENT")&&job.samples.size()<20)job.samples.add(report);
         }
         if(!job.records.hasNext())finish("DONE");
     }
-    private void finish(String state){job.state=state;job.records=Collections.emptyIterator();job.owner.sendMessage(Main.tr("msg.jobFinished",job.id,state,job.done,job.total,job.changed));}
+    private void finish(String state){job.state=state;job.records=Collections.emptyIterator();job.owner.sendMessage(Main.tr("msg.jobFinished",job.id,state,job.done,job.total,job.changed));job.owner.sendMessage(Main.tr("msg.jobCounts",job.counts.toString()));}
     String status(){
         var out=new JsonObject();if(job==null){out.addProperty("state","IDLE");return out.toString();}
         out.addProperty("waitingForPerformance",waiting&&job.state.equals("RUNNING"));out.addProperty("force",job.force);out.addProperty("jobId",job.id);out.addProperty("mode",job.mode);if(job.type!=null)out.addProperty("type",job.type);out.addProperty("state",job.state);

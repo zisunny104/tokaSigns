@@ -57,6 +57,7 @@ help:
     - "set|§7<參數> 必填，[參數] 選填。外框、標記及 | 不用輸入，「留空」不填字"
     - "type.10|§6[ §ftpr | <區域代碼> | 留空 | 留空§6 ] §7- §b區域傳送"
     - "type.11|§6[ §ftpp | <傳送點名稱> | 留空 | 留空§6 ] §7- §b公共傳送點"
+    - "type.12|§6[ §ftpl | <領地UUID> | 留空 | 留空§6 ] §7- §b領地傳送（使用 /land list 查 ID）"
     - "type.31|§6[ §fb | <商品代碼> | 留空 | 留空§6 ] §7- §b購買商品"
     - "type.32|§6[ §fs | <商品代碼> | 留空 | 留空§6 ] §7- §b回收商品"
     - "type.33|§6[ §fitem | 留空 | 留空 | 留空§6 ] §7- §b物品管理入口"
@@ -74,7 +75,8 @@ msg:
   # 已排入維護工作；${0}＝工作編號
   jobQueued: "§7[告示]§r §b已排入工作 #§a${0}§b；§e/sign jobs §b查看進度。"
   # 維護工作結束；${0}＝工作編號，${1}＝結束狀態 code（DONE／CANCELLED），${2}＝已處理，${3}＝總數，${4}＝更新數
-  jobFinished: "§7[告示]§r §b維護工作 #§a${0} ${1}§b：§a${2}§b/§a${3}§b，更新 §a${4}§b；§e/sign jobs §b查看結果。"
+  jobFinished: "§7[告示]§r §b維護工作 #§a${0} ${1}§b：§a${2}§b/§a${3}§b，更新／重送 §a${4}§b；§e/sign jobs §b查看結果。"
+  jobCounts: "§7[告示]§r §b處理結果：§f${0}§7；UPDATED＝已修正、RESENT＝已重送、CHUNK_UNLOADED＝區塊未載入（可加 --force）、WORLD_UNLOADED＝世界未掛載。"
   # /sign status；${0}＝登記筆數，${1}＝事件接管（status.yes／status.no），${2}＝保護 provider 名稱或 status.notReady
   status: "§7[告示]§r §b登記 §a${0} §b筆；事件接管=§a${1}§b；保護 provider=§a${2}"
   # /sign cancel

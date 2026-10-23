@@ -37,6 +37,8 @@
 
 修復類別可填 `tpr`、`tpp`、`tpl`、`tps`、`pay`、`buy`、`sell`、`item`、`status` 或類型 ID；`all` 會檢查所有已登記功能牌。
 
+`fix`／`repair`／`refresh` 每次都會重新套用發光狀態並重送牌面，即使伺服器記錄已相符，也不會因此略過客戶端更新。結果中的 `UPDATED` 是資料有修正，`RESENT` 是狀態已相符但再次送出；這表示伺服器已發送，不代表客戶端已確認收到。一般工作略過未載入區塊，完成時會列出 `CHUNK_UNLOADED` 等原因；需要處理所有已掛載世界內的既有區塊時使用 `/sign fix all --force`，仍依效能分批執行。
+
 除標示「所有人」者，權限預設皆為 OP；`tokaSigns.admin` 視為擁有全部權限。`--force` 會載入既有區塊，另需 `tokaSigns.force`；破壞功能牌需 `tokaSigns.break`。
 
 也可以依下表填寫告示牌建立功能牌，「留空」欄位不需填字：
@@ -45,6 +47,7 @@
 | --- | --- | --- | --- |
 | `tpr` | 區域代碼 | 區域傳送 | `tokaSigns.type.10` |
 | `tpp` | 傳送點名稱 | 公共傳送點 | `tokaSigns.type.11` |
+| `tpl` | tokaLand 領地 UUID | 領地傳送（顯示名稱由 tokaLand 即時提供；動作經 tokaPortal） | `tokaSigns.type.12` |
 | `b` | 商品代碼 | 購買商品 | `tokaSigns.type.31` |
 | `s` | 商品代碼 | 回收商品 | `tokaSigns.type.32` |
 | `item` | 留空 | 物品管理入口 | `tokaSigns.type.33` |
@@ -73,11 +76,11 @@
 | `registerPolicy` / `unregisterPolicy` | 擁有者名稱、`Policy` | 提供保護判斷（允許、拒絕、尚未就緒），沒有 Policy 時功能牌動作會被拒絕 |
 | `registerAction` / `unregisterAction` | 類型 ID、`Action` | 提供該類型功能牌被點擊時的動作 |
 | `registerDisplayDataProvider` / `unregisterDisplayDataProvider` | 類型 ID、`DisplayDataProvider` | 提供 JSON 業務資料；牌面文字與色碼由 tokaSigns 按舊版格式產生 |
-| `registerDefinition` / `unregisterDefinition` | 類型 ID、`Definition` | 相容舊版或自訂功能牌格式；內建類型 10、11、31、32、33 由 tokaSigns 格式器優先處理 |
+| `registerDefinition` / `unregisterDefinition` | 類型 ID、`Definition` | 相容舊版或自訂功能牌格式；內建類型 10、11、12、31、32、33 由 tokaSigns 格式器優先處理 |
 | `serviceReady` | 無 | 確認本插件已就緒 |
 | `isActionsEnabled` | 無 | 目前是否由本插件接管事件 |
 
-`DisplayDataProvider.resolve` 回傳 JSON 字串。傳送類型 10、11 使用 `info`；購買／回收類型 31、32 使用 `itemName`、`quantity`、`amount`。provider 只負責提供仍由其他插件管理的資料，不應回傳已排版的告示牌文字。tokaSigns 產生與舊版成功使用後相同的動態版型，修復時也會重新讀取 provider 資料。類型 33 的物品管理牌面由 tokaSigns 直接產生。Zero 可暫時提供區域、傳送點及商店資料與動作，但不再擁有告示牌樣式。
+`DisplayDataProvider.resolve` 回傳 JSON 字串。傳送類型 10、11 使用 `info`，類型 12 使用 `name`；購買／回收類型 31、32 使用 `itemName`、`quantity`、`amount`。provider 只負責提供仍由其他插件管理的資料，不應回傳已排版的告示牌文字。tokaSigns 產生與舊版成功使用後相同的動態版型，修復時也會重新讀取 provider 資料。類型 12 以 claim UUID 作為代碼、由 tokaLand 供應名稱、由 tokaPortal 執行傳送；任一 API 不可用時該類型不會出現在設定候選中。Zero 仍只依交接驗證結果決定何時停用舊事件與指令。
 
 ## 疑難排解
 

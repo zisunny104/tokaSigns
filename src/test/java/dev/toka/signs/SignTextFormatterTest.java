@@ -18,6 +18,8 @@ public class SignTextFormatterTest {
                 SignTextFormatter.format(sign(10, "town"), data));
         assertArrayEquals(new String[]{"§r§a⦋傳送⦌§r", "§f歡迎光臨", "§f歡迎光臨", "§b點擊傳送"},
                 SignTextFormatter.format(sign(11, "spawn"), data));
+        assertArrayEquals(new String[]{"§r§a⦋傳送⦌§r", "§b中央廣場", "§e-", "§b點擊傳送"},
+                SignTextFormatter.format(sign(12, "claim-uuid"), data));
     }
 
     @Test public void shopAndManagementStylesMatchLegacySigns() {

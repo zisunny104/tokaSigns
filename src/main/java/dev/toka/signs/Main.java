@@ -35,7 +35,7 @@ public final class Main extends PluginBase {
             actions.put(41,(p,r)->true);definitions.put(41,(p,r,lines)->statusLines());
             maintenance=new SignMaintenance(this);
             getServer().getScheduler().scheduleRepeatingTask(this,new cn.nukkit.scheduler.Task(){public void onRun(int tick){maintenance.tick();}},1);
-            instance=this;getServer().getPluginManager().registerEvents(new SignEvents(this),this);
+            instance=this;LandPortalIntegration.connect(this);getServer().getPluginManager().registerEvents(new SignEvents(this),this);
             getServer().getScheduler().scheduleRepeatingTask(this,new cn.nukkit.scheduler.Task(){public void onRun(int tick){updateStatusSigns();}},25);
             getLogger().info(messages.text("log.loaded",registry.records().size()));
         }catch(Exception error){getLogger().error(messages.text("log.storageFailed"));throw new IllegalStateException("Sign storage could not be loaded; keep the original data",error);}
@@ -49,6 +49,11 @@ public final class Main extends PluginBase {
             CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsAction",new String[]{"help","status","edit","copy","paste","set","cancel","inspect","check","refresh","repair","fix","jobs"})),
             CommandParameter.newType("arguments",true,cn.nukkit.command.data.CommandParamType.RAWTEXT)
         });
+        registered.addCommandParameters("jobs-cancel",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsJobs",new String[]{"jobs"})),CommandParameter.newEnum("operation",new cn.nukkit.command.data.CommandEnum("TokaSignsJobsAction",new String[]{"cancel"}))});
+        registered.addCommandParameters("inspect",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsInspect",new String[]{"inspect"})),CommandParameter.newType("id",cn.nukkit.command.data.CommandParamType.INT),CommandParameter.newEnum("force",true,new cn.nukkit.command.data.CommandEnum("TokaSignsForce",new String[]{"--force"}))});
+        registered.addCommandParameters("maintenance",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsMaintenance",new String[]{"check","refresh"})),CommandParameter.newEnum("target",new cn.nukkit.command.data.CommandEnum("TokaSignsTarget",new String[]{"all"})),CommandParameter.newEnum("force",true,new cn.nukkit.command.data.CommandEnum("TokaSignsForce",new String[]{"--force"}))});
+        registered.addCommandParameters("repair",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsRepair",new String[]{"repair","fix"})),CommandParameter.newEnum("type",new cn.nukkit.command.data.CommandEnum("TokaSignsType",new String[]{"all","tpr","tpp","tpl","tps","pay","buy","sell","item","status"})),CommandParameter.newEnum("force",true,new cn.nukkit.command.data.CommandEnum("TokaSignsForce",new String[]{"--force"}))});
+        registered.addCommandParameters("set",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsSet",new String[]{"set"})),CommandParameter.newType("type",cn.nukkit.command.data.CommandParamType.STRING),CommandParameter.newType("action",cn.nukkit.command.data.CommandParamType.STRING)});
         // Plugin reloads do not automatically refresh Bedrock's cached command list.
         getServer().getScheduler().scheduleTask(this,new cn.nukkit.scheduler.Task(){
             public void onRun(int tick){
@@ -112,7 +117,7 @@ public final class Main extends PluginBase {
         Main m=service();if(!m.ownsEvents()||!m.allowed(player,sign,"activate"))return false;
         Action a=m.actions.get(sign.type());return a!=null&&a.execute(player,sign);
     }
-    boolean hasDefinition(int type){return type==41||type==33||displayDataProviders.containsKey(type)||definitions.containsKey(type);}
+    boolean hasDefinition(int type){if(type==12&&!ownsEvents())return false;return type==41||type==33||displayDataProviders.containsKey(type)||definitions.containsKey(type);}
     boolean hasPolicy(){return policy!=null;}
     /** Single-record inspection; force may synchronously load one existing chunk. Prefer jobs for bulk work. */
     public static String inspectSign(int id,CommandSender actor,boolean force){
@@ -179,7 +184,7 @@ public final class Main extends PluginBase {
     }
     boolean glowEnabled(){return getConfig().getBoolean("signs.glow",true);}
     void applyGlow(cn.nukkit.blockentity.BlockEntitySign sign){sign.setGlowing(glowEnabled());sign.spawnToAll();}
-    void applySignText(cn.nukkit.blockentity.BlockEntitySign sign,String[] lines){sign.setGlowing(glowEnabled());sign.setText(lines);}
+    void applySignText(cn.nukkit.blockentity.BlockEntitySign sign,String[] lines){sign.setGlowing(glowEnabled());sign.setText(lines);sign.spawnToAll();}
     private String[] statusLines(){return new String[]{messages.text("ui.statusSign.title"),messages.text("ui.statusSign.tps",String.format(Locale.ROOT,"%.1f",getServer().getTicksPerSecond())),messages.text("ui.statusSign.load",String.format(Locale.ROOT,"%.1f",getServer().getTickUsage())),messages.text("ui.statusSign.net",String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getUpload()),String.format(Locale.ROOT,"%.1f",getServer().getNetwork().getDownload()))};}
     private void updateStatusSigns(){
         if(!ownsEvents())return;
@@ -191,7 +196,7 @@ public final class Main extends PluginBase {
             if(entity instanceof cn.nukkit.blockentity.BlockEntitySign sign)try{applySignText(sign,statusLines());}catch(RuntimeException error){getLogger().warning(messages.text("log.statusUpdateFailed",r.id()));}
         }
     }
-    public void onDisable(){if(maintenance!=null)maintenance.close();instance=null;actions.clear();definitions.clear();displayDataProviders.clear();SignEvents.clear();policy=null;if(registry!=null)try{registry.close();}catch(Exception error){getLogger().warning(messages.text("log.storageCloseFailed"));}}
+    public void onDisable(){LandPortalIntegration.close(this);if(maintenance!=null)maintenance.close();instance=null;actions.clear();definitions.clear();displayDataProviders.clear();SignEvents.clear();policy=null;if(registry!=null)try{registry.close();}catch(Exception error){getLogger().warning(messages.text("log.storageCloseFailed"));}}
 }
 
 

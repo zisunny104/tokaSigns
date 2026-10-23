@@ -1,9 +1,9 @@
 name: tokaSigns
 main: dev.toka.signs.Main
-version: "0.4.11"
+version: "0.4.14"
 api: ["1.0.4"]
 author: zisunny104
-softdepend: [zero, tokaDisplay]
+softdepend: [zero, tokaLand, tokaPortal, tokaDisplay]
 description: Nukkit 告示牌管理：功能牌設定、維護檢查與修復
 commands:
   sign:
@@ -45,7 +45,7 @@ permissions:
     description: 建立或編輯公共傳送點告示牌（類型 11）
     default: op
   tokaSigns.type.12:
-    description: 建立或編輯類型 12 告示牌
+    description: 建立或編輯領地傳送告示牌（代碼為 tokaLand 領地 UUID）
     default: op
   tokaSigns.type.13:
     description: 建立或編輯類型 13 告示牌

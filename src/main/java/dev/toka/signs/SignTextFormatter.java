@@ -7,7 +7,7 @@ final class SignTextFormatter {
     private SignTextFormatter() {}
 
     static boolean supports(int type) {
-        return type == 10 || type == 11 || type == 31 || type == 32 || type == 33;
+        return type == 10 || type == 11 || type == 12 || type == 31 || type == 32 || type == 33;
     }
 
     static String[] format(SignRegistry.SignRecord sign, JsonObject data) {
@@ -24,6 +24,11 @@ final class SignTextFormatter {
                 // The legacy public-point sign repeats its display text on both lines.
                 String info = "§f" + data.get("info").getAsString();
                 yield new String[]{"§r§a⦋傳送⦌§r", info, info, "§b點擊傳送"};
+            }
+            case 12 -> {
+                require(data, "name");
+                yield new String[]{"§r§a⦋傳送⦌§r", "§b" + data.get("name").getAsString(),
+                        "§e-", "§b點擊傳送"};
             }
             case 31 -> {
                 require(data, "itemName", "quantity", "amount");

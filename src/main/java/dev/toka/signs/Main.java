@@ -113,6 +113,10 @@ public final class Main extends PluginBase {
     }
     String[] prepare(Player p,SignRegistry.SignRecord r,String[] lines){String[] canonical=format(r,p);if(canonical!=null)return canonical;var d=definitions.get(r.type());return d==null?null:d.prepare(p,r,lines);}
     String[] prepareRefresh(Player p,SignRegistry.SignRecord r,String[] lines){String[] canonical=format(r,p);if(canonical!=null)return canonical;var d=definitions.get(r.type());return d==null?null:d.prepareRefresh(p,r,lines);}
+    /** What the face of this sign should read now, or null when the sign has nothing to show. For plugins that check a sign before acting on it. */
+    public static String[] currentText(Player player,SignRegistry.SignRecord sign){
+        return service().prepareRefresh(player,sign,new String[]{"",sign.code()==null?"":sign.code(),"",""});
+    }
     public static boolean activate(Player player,SignRegistry.SignRecord sign){
         Main m=service();if(!m.ownsEvents()||!m.allowed(player,sign,"activate"))return false;
         Action a=m.actions.get(sign.type());return a!=null&&a.execute(player,sign);

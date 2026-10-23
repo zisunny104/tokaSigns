@@ -59,7 +59,7 @@
 
 | key | 預設 | 說明 |
 | --- | --- | --- |
-| `actions.enabled` | `true` | 是否由本插件接管告示牌的點擊、建立、編輯與破壞；zero 的 sign 模組仍啟用時不會接管 |
+| `actions.enabled` | `true` | 是否由本插件接管告示牌的點擊、建立、編輯與破壞 |
 | `messages.use-failed-seconds` | `5` | 告示牌無法使用時，tokaDisplay 頂部訊息的停留秒數（1–60）；未安裝 tokaDisplay 時改用聊天室，同一玩家 2 秒內只提示一次 |
 | `signs.glow` | `true` | 讓功能牌文字發光並顯示外框；建立與修復會同步狀態給線上玩家 |
 | `maintenance.normal.max-records` | `32` | 一般維護每 tick 最多處理幾筆（1–128） |

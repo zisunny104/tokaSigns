@@ -19,7 +19,6 @@ public final class Main extends PluginBase {
     private SignRegistry registry;
     private SignMaintenance maintenance;
     private Messages messages;
-    private java.lang.reflect.Method zeroModuleCheck;
     private Policy policy;
     private String policyOwner;
     private final Map<Integer,Action> actions=new HashMap<>();
@@ -89,15 +88,7 @@ public final class Main extends PluginBase {
         if(main.displayDataProviders.putIfAbsent(type,Objects.requireNonNull(provider))!=null)throw new IllegalStateException("Display data provider already registered");
     }
     public static void unregisterDisplayDataProvider(int type){service().displayDataProviders.remove(type);}
-    boolean ownsEvents(){
-        if(!getConfig().getBoolean("actions.enabled",true))return false;
-        var zero=getServer().getPluginManager().getPlugin("zero");
-        if(zero!=null&&zero.isEnabled())try{
-            if(zeroModuleCheck==null)zeroModuleCheck=zero.getClass().getMethod("isModuleActive",String.class);
-            if((Boolean)zeroModuleCheck.invoke(zero,"sign"))return false;
-        }catch(Exception|LinkageError error){return false;}
-        return true;
-    }
+    boolean ownsEvents(){return getConfig().getBoolean("actions.enabled",true);}
     boolean allowed(Player p,SignRegistry.SignRecord sign,String operation){
         if(!operation.equals("activate")&&!permits(p,operation.equals("create")?"set":operation))return false;
         // the permission above is the rule when no policy is registered; a policy can only add restrictions

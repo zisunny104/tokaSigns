@@ -13,7 +13,7 @@ storage:
 
 actions:
   # 是否由本插件接管告示牌事件（點擊、建立、編輯、破壞）。可填：true、false。
-  # 注意：zero 的 sign 模組仍啟用時，本插件不接管事件；缺少業務／保護 provider 的動作會被拒絕。
+  # 沒有註冊保護政策時，以權限為準；沒有業務 provider 的牌子不會有動作。
   enabled: true
 
 messages:
@@ -22,7 +22,7 @@ messages:
 
 # 功能牌外觀。
 signs:
-  # 是否讓牌面文字在暗處保持清晰，沿用 zero signs.glow 的預設值。
+  # 是否讓牌面文字在暗處保持清晰，預設開啟。
   glow: true
 
 # 維護工作（/sign check、/sign refresh、/sign repair）每個 tick 的處理量。

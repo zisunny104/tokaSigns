@@ -2,7 +2,7 @@ package dev.toka.signs;
 
 import com.google.gson.JsonObject;
 
-/** Canonical presentation for the functional sign types migrated from Zero. */
+/** Canonical presentation for the functional sign types of the server. */
 final class SignTextFormatter {
     private SignTextFormatter() {}
 

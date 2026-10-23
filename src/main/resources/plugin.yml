@@ -1,9 +1,9 @@
 name: tokaSigns
 main: dev.toka.signs.Main
-version: "0.4.16"
+version: "0.4.17"
 api: ["1.0.4"]
 author: zisunny104
-softdepend: [zero, tokaLand, tokaPortal, tokaDisplay]
+softdepend: [tokaRegions, tokaLand, tokaPortal, tokaDisplay]
 description: Nukkit 告示牌管理：功能牌設定、維護檢查與修復
 commands:
   sign:

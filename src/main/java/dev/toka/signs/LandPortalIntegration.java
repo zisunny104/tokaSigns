@@ -32,13 +32,70 @@ final class LandPortalIntegration {
             displayRegistered = true;
             signs.registerAction(12, (player, sign) -> teleport(player, sign.code()));
             actionRegistered = true;
-            signs.getLogger().info("已連接 tokaLand／tokaPortal；tpl 告示牌使用穩定領地 ID。zero 舊功能仍由 zero 設定控制切換。");
+            registerRegionAndPoint(signs, portal);
+            signs.getLogger().info("已連接 tokaLand／tokaPortal；tpl、區域傳送與公共傳送點告示牌可用。");
             return true;
         } catch (ReflectiveOperationException | LinkageError | RuntimeException error) {
             close(signs);
             signs.getLogger().warning("tokaLand／tokaPortal API 不可用；tpl 告示牌暫停：" + error.getClass().getSimpleName());
             return false;
         }
+    }
+
+
+    private static Method portalRegion, portalPoint, publicPoints, findPoint, regionId;
+
+    /** Region signs (10) and public point signs (11): the sign holds the name; tokaPortal does the teleport. */
+    private static void registerRegionAndPoint(Main signs, Plugin portal) throws ReflectiveOperationException {
+        Class<?> portalApi = Class.forName("dev.toka.pl.tokaPortal.utils.Portal", false, portal.getClass().getClassLoader());
+        portalRegion = portalApi.getMethod("toRegion", String.class, Player.class);
+        portalPoint = portalApi.getMethod("toPoint", String.class, Player.class);
+        publicPoints = portal.getClass().getMethod("getPublicPoints");
+        Plugin regions = enabled("tokaRegions");
+        if (regions != null) regionId = Class.forName("dev.toka.regions.Main", false, regions.getClass().getClassLoader()).getMethod("regionIdByName", String.class);
+        signs.registerDisplayDataProvider(10, (player, sign) -> regionDisplay(sign.code()));
+        signs.registerAction(10, (player, sign) -> regionKnown(sign.code()) && call(portalRegion, sign.code(), player));
+        signs.registerDisplayDataProvider(11, (player, sign) -> pointDisplay(sign.code()));
+        signs.registerAction(11, (player, sign) -> pointJson(sign.code()) != null && call(portalPoint, sign.code(), player));
+        extraRegistered = true;
+    }
+
+    private static boolean extraRegistered;
+
+    private static boolean call(Method method, String name, Player player) {
+        try { method.invoke(null, name, player); return true; }
+        catch (ReflectiveOperationException | LinkageError | RuntimeException error) { return false; }
+    }
+
+    private static boolean regionKnown(String name) {
+        if (regionId == null || name == null) return false;
+        try { return regionId.invoke(null, name) != null; } catch (ReflectiveOperationException | LinkageError | RuntimeException error) { return false; }
+    }
+
+    private static String regionDisplay(String name) {
+        if (!regionKnown(name)) return null;
+        JsonObject data = new JsonObject();
+        data.addProperty("name", name);
+        data.addProperty("info", name);
+        return data.toString();
+    }
+
+    private static JsonObject pointJson(String name) {
+        if (publicPoints == null || name == null) return null;
+        try {
+            Object service = publicPoints.invoke(Server.getInstance().getPluginManager().getPlugin("tokaPortal"));
+            Object json = service.getClass().getMethod("findJson", String.class).invoke(service, name);
+            return json == null ? null : JsonParser.parseString(json.toString()).getAsJsonObject();
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException error) { return null; }
+    }
+
+    private static String pointDisplay(String name) {
+        JsonObject point = pointJson(name);
+        if (point == null) return null;
+        JsonObject data = new JsonObject();
+        data.addProperty("name", name);
+        data.addProperty("info", point.has("info") && !point.get("info").isJsonNull() ? point.get("info").getAsString() : "");
+        return data.toString();
     }
 
     private static String display(String claimId) {
@@ -65,6 +122,11 @@ final class LandPortalIntegration {
     static void close(Main signs) {
         if (actionRegistered) try { signs.unregisterAction(12); } catch (RuntimeException | LinkageError ignored) { }
         if (displayRegistered) try { signs.unregisterDisplayDataProvider(12); } catch (RuntimeException | LinkageError ignored) { }
+        if (extraRegistered) for (int type : new int[]{10, 11}) {
+            try { signs.unregisterAction(type); } catch (RuntimeException | LinkageError ignored) { }
+            try { signs.unregisterDisplayDataProvider(type); } catch (RuntimeException | LinkageError ignored) { }
+        }
+        extraRegistered = false;
         actionRegistered = false;
         displayRegistered = false;
         displayLookup = null;

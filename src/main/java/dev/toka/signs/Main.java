@@ -68,7 +68,7 @@ public final class Main extends PluginBase {
     }
     public static boolean isActionsEnabled(){return service().getConfig().getBoolean("actions.enabled",true);}
     public static boolean serviceReady(){return instance!=null&&instance.isEnabled()&&instance.registry!=null;}
-    public static boolean readyForTypes(int[] types){Main m=service();if(m.policy==null)return false;for(int t:types)if(!m.actions.containsKey(t))return false;return true;}
+    public static boolean readyForTypes(int[] types){Main m=service();for(int t:types)if(!m.actions.containsKey(t))return false;return true;}
     public static SignRegistry getRegistry(){return service().registry;}
     public static void replaceRecords(String json)throws Exception{service().registry.replaceIfEmptyOrEqual(json);}
     public static String recordsJson(){return service().registry.recordsJson();}
@@ -100,7 +100,8 @@ public final class Main extends PluginBase {
     }
     boolean allowed(Player p,SignRegistry.SignRecord sign,String operation){
         if(!operation.equals("activate")&&!permits(p,operation.equals("create")?"set":operation))return false;
-        try{return policy!=null&&policy.authorize(p,sign,operation)==Decision.ALLOW;}
+        // the permission above is the rule when no policy is registered; a policy can only add restrictions
+        try{return policy==null||policy.authorize(p,sign,operation)==Decision.ALLOW;}
         catch(Exception|LinkageError error){getLogger().warning(tr("log.policyFailed",error.getClass().getSimpleName()));return false;}
     }
     private String[] format(SignRegistry.SignRecord r,Player p){

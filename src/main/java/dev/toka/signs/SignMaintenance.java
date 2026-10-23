@@ -60,7 +60,7 @@ final class SignMaintenance {
             // state does not establish that the client received the latest text/glow packet.
             if(!refresh&&textMatches&&glowMatches)return result(out,"MATCH");
             if(!refresh)return result(out,textMatches?"STYLE_DIFFERS":"TEXT_DIFFERS");
-            if(!Main.permits(actor,"type."+r.type())||!main.hasPolicy())return result(out,"DENIED");
+            if(!Main.permits(actor,"type."+r.type()))return result(out,"DENIED");
             if(player!=null&&(!player.isOnline()||!main.allowed(player,r,"edit")))return result(out,"DENIED");
             // Interactive refresh respects other protection listeners; console is explicit administrator maintenance.
             if(player!=null){

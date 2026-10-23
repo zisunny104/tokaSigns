@@ -8,7 +8,7 @@ import dev.toka.storage.*;
 import dev.toka.i18n.Messages;
 import java.util.*;
 
-public final class Main extends PluginBase {
+public final class Main extends PluginBase implements cn.nukkit.event.Listener {
     public enum Decision { ALLOW,DENY,UNAVAILABLE }
     public interface Policy { Decision authorize(Player player,SignRegistry.SignRecord sign,String operation); }
     public interface Action { boolean execute(Player player,SignRegistry.SignRecord sign); }
@@ -26,7 +26,6 @@ public final class Main extends PluginBase {
     private final Map<Integer,DisplayDataProvider> displayDataProviders=new HashMap<>();
     public void onEnable(){
         saveDefaultConfig();
-        configureCommandSuggestions();
         messages=new Messages(getClass().getClassLoader(),getDataFolder().toPath(),getConfig().getString("language","zh-TW"),line->getLogger().warning(line));
         try{
             var backend=Backend.valueOf(getConfig().getString("storage.backend","sqlite").toUpperCase(Locale.ROOT));
@@ -34,31 +33,60 @@ public final class Main extends PluginBase {
             actions.put(41,(p,r)->true);definitions.put(41,(p,r,lines)->statusLines());
             maintenance=new SignMaintenance(this);
             getServer().getScheduler().scheduleRepeatingTask(this,new cn.nukkit.scheduler.Task(){public void onRun(int tick){maintenance.tick();}},1);
-            instance=this;LandPortalIntegration.connect(this);getServer().getPluginManager().registerEvents(new SignEvents(this),this);
+            instance=this;LandPortalIntegration.connect(this);getServer().getPluginManager().registerEvents(new SignEvents(this),this);getServer().getPluginManager().registerEvents(this,this);configureCommandSuggestions();
             getServer().getScheduler().scheduleRepeatingTask(this,new cn.nukkit.scheduler.Task(){public void onRun(int tick){updateStatusSigns();}},25);
             getLogger().info(messages.text("log.loaded",registry.records().size()));
         }catch(Exception error){getLogger().error(messages.text("log.storageFailed"));throw new IllegalStateException("Sign storage could not be loaded; keep the original data",error);}
     }
     private void configureCommandSuggestions(){
         var command=getCommand("sign");
-        if(command==null){getLogger().warning("無法設定 /sign 的指令候選。");return;}
+        if(command==null){getLogger().warning(messages.text("log.noCommand"));return;}
+        var names=new ArrayList<String>();
+        for(var entry:SignTypeSelector.NAMES.entrySet())if(hasDefinition(entry.getKey()))names.add(entry.getValue());
+        var repairNames=new ArrayList<String>(List.of("all"));repairNames.addAll(names);
         cn.nukkit.command.Command registered=(cn.nukkit.command.Command)command;
         registered.getCommandParameters().clear();
         registered.addCommandParameters("default",new CommandParameter[]{
-            CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsAction",new String[]{"help","status","edit","copy","paste","set","cancel","inspect","check","refresh","repair","fix","jobs"})),
+            CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsAction",new String[]{"help","status","edit","copy","paste","set","cancel","inspect","check","refresh","repair","fix","jobs","reload"})),
             CommandParameter.newType("arguments",true,cn.nukkit.command.data.CommandParamType.RAWTEXT)
         });
         registered.addCommandParameters("jobs-cancel",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsJobs",new String[]{"jobs"})),CommandParameter.newEnum("operation",new cn.nukkit.command.data.CommandEnum("TokaSignsJobsAction",new String[]{"cancel"}))});
         registered.addCommandParameters("inspect",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsInspect",new String[]{"inspect"})),CommandParameter.newType("id",cn.nukkit.command.data.CommandParamType.INT),CommandParameter.newEnum("force",true,new cn.nukkit.command.data.CommandEnum("TokaSignsForce",new String[]{"--force"}))});
         registered.addCommandParameters("maintenance",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsMaintenance",new String[]{"check","refresh"})),CommandParameter.newEnum("target",new cn.nukkit.command.data.CommandEnum("TokaSignsTarget",new String[]{"all"})),CommandParameter.newEnum("force",true,new cn.nukkit.command.data.CommandEnum("TokaSignsForce",new String[]{"--force"}))});
-        registered.addCommandParameters("repair",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsRepair",new String[]{"repair","fix"})),CommandParameter.newEnum("type",new cn.nukkit.command.data.CommandEnum("TokaSignsType",new String[]{"all","tpr","tpp","tpl","tps","pay","buy","sell","item","status"})),CommandParameter.newEnum("force",true,new cn.nukkit.command.data.CommandEnum("TokaSignsForce",new String[]{"--force"}))});
-        registered.addCommandParameters("set",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsSet",new String[]{"set"})),CommandParameter.newType("type",cn.nukkit.command.data.CommandParamType.STRING),CommandParameter.newType("action",cn.nukkit.command.data.CommandParamType.STRING)});
+        registered.addCommandParameters("repair",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsRepair",new String[]{"repair","fix"})),CommandParameter.newEnum("type",new cn.nukkit.command.data.CommandEnum("TokaSignsType",repairNames.toArray(new String[0]))),CommandParameter.newEnum("force",true,new cn.nukkit.command.data.CommandEnum("TokaSignsForce",new String[]{"--force"}))});
+        registered.addCommandParameters("set-id",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsSet",new String[]{"set"})),CommandParameter.newType("type",cn.nukkit.command.data.CommandParamType.INT),CommandParameter.newType("code",cn.nukkit.command.data.CommandParamType.STRING)});
+        if(!names.isEmpty())registered.addCommandParameters("set",new CommandParameter[]{CommandParameter.newEnum("action",new cn.nukkit.command.data.CommandEnum("TokaSignsSet",new String[]{"set"})),CommandParameter.newEnum("type",new cn.nukkit.command.data.CommandEnum("TokaSignsSetType",names.toArray(new String[0]))),CommandParameter.newType("code",cn.nukkit.command.data.CommandParamType.STRING)});
         // Plugin reloads do not automatically refresh Bedrock's cached command list.
         getServer().getScheduler().scheduleTask(this,new cn.nukkit.scheduler.Task(){
             public void onRun(int tick){
                 for(Player player:getServer().getOnlinePlayers().values())player.sendCommandData();
             }
         });
+    }
+    private boolean refreshQueued;
+    /** Providers register at different times; one refresh after the burst rebuilds the type words and resends the command list. */
+    private void queueCommandRefresh(){
+        if(refreshQueued||!isEnabled())return;
+        refreshQueued=true;
+        getServer().getScheduler().scheduleTask(this,()->{refreshQueued=false;if(isEnabled())configureCommandSuggestions();});
+    }
+    @cn.nukkit.event.EventHandler public void onPluginEnabled(cn.nukkit.event.plugin.PluginEnableEvent event){
+        String name=event.getPlugin().getName();
+        if(name.equals("tokaPortal")||name.equals("tokaLand")||name.equals("tokaRegions"))reconnectIntegrations();
+    }
+    @cn.nukkit.event.EventHandler public void onPluginDisabled(cn.nukkit.event.plugin.PluginDisableEvent event){
+        String name=event.getPlugin().getName();
+        if(name.equals("tokaPortal")||name.equals("tokaLand")||name.equals("tokaRegions"))LandPortalIntegration.close(this);
+    }
+    /** Runs on the next tick so the plugin that just enabled has finished its own start. */
+    private void reconnectIntegrations(){
+        getServer().getScheduler().scheduleTask(this,()->{if(!isEnabled())return;LandPortalIntegration.close(this);LandPortalIntegration.connect(this);queueCommandRefresh();});
+    }
+    private void reloadSettings(){
+        reloadConfig();
+        messages.language(getConfig().getString("language","zh-TW"));
+        LandPortalIntegration.close(this);LandPortalIntegration.connect(this);
+        configureCommandSuggestions();
     }
     private static Main service(){
         if(instance==null||!instance.isEnabled())throw new IllegalStateException("tokaSigns unavailable");
@@ -79,15 +107,16 @@ public final class Main extends PluginBase {
         main.policyOwner=owner;main.policy=Objects.requireNonNull(policy);
     }
     public static void unregisterPolicy(String owner){Main m=service();if(Objects.equals(m.policyOwner,owner)){m.policyOwner=null;m.policy=null;}}
-    public static void registerAction(int type,Action action){if(service().actions.putIfAbsent(type,Objects.requireNonNull(action))!=null)throw new IllegalStateException("Handler already registered");}
-    public static void unregisterAction(int type){service().actions.remove(type);}
-    public static void registerDefinition(int type,Definition definition){if(service().definitions.putIfAbsent(type,Objects.requireNonNull(definition))!=null)throw new IllegalStateException("Definition already registered");}
-    public static void unregisterDefinition(int type){service().definitions.remove(type);}
+    public static void registerAction(int type,Action action){if(service().actions.putIfAbsent(type,Objects.requireNonNull(action))!=null)throw new IllegalStateException("Handler already registered");service().queueCommandRefresh();}
+    public static void unregisterAction(int type){service().actions.remove(type);service().queueCommandRefresh();}
+    public static void registerDefinition(int type,Definition definition){if(service().definitions.putIfAbsent(type,Objects.requireNonNull(definition))!=null)throw new IllegalStateException("Definition already registered");service().queueCommandRefresh();}
+    public static void unregisterDefinition(int type){service().definitions.remove(type);service().queueCommandRefresh();}
     public static void registerDisplayDataProvider(int type,DisplayDataProvider provider){
         Main main=service();if(!SignTextFormatter.supports(type)||type==33)throw new IllegalArgumentException("No external display data is used for type "+type);
         if(main.displayDataProviders.putIfAbsent(type,Objects.requireNonNull(provider))!=null)throw new IllegalStateException("Display data provider already registered");
+        main.queueCommandRefresh();
     }
-    public static void unregisterDisplayDataProvider(int type){service().displayDataProviders.remove(type);}
+    public static void unregisterDisplayDataProvider(int type){service().displayDataProviders.remove(type);service().queueCommandRefresh();}
     boolean ownsEvents(){return getConfig().getBoolean("actions.enabled",true);}
     boolean allowed(Player p,SignRegistry.SignRecord sign,String operation){
         if(!operation.equals("activate")&&!permits(p,operation.equals("create")?"set":operation))return false;
@@ -131,7 +160,7 @@ public final class Main extends PluginBase {
     boolean canDefine(Player p,int type){return permits(p,"type."+type)&&hasDefinition(type);}
     public boolean onCommand(CommandSender sender,Command command,String label,String[] args){
         String op=args.length==0?"help":args[0].toLowerCase(Locale.ROOT);if(op.equals("fix"))op="repair";
-        if(!Set.of("help","status","edit","copy","paste","set","cancel","inspect","check","refresh","repair","jobs").contains(op)){sender.sendMessage(messages.text("err.unknownCommand"));return true;}
+        if(!Set.of("help","status","edit","copy","paste","set","cancel","inspect","check","refresh","repair","jobs","reload").contains(op)){sender.sendMessage(messages.text("err.unknownCommand"));return true;}
         if(!permits(sender,op)){sender.sendMessage(messages.text("err.noPermission"));return true;}
         if(Set.of("inspect","check","refresh","repair","jobs").contains(op)){
             try{
@@ -151,11 +180,13 @@ public final class Main extends PluginBase {
         }
         if(!op.equals("set")&&args.length>1){sender.sendMessage(messages.text("err.noExtraArgs"));return true;}
         if(op.equals("help")){sendHelp(sender);return true;}
+        if(op.equals("reload")){reloadSettings();sender.sendMessage(messages.text("msg.reloaded"));return true;}
         if(op.equals("status")){sender.sendMessage(messages.text("msg.status",registry.records().size(),yesNo(ownsEvents()),policyOwner==null?messages.text("status.notReady"):policyOwner));return true;}
         if(!(sender instanceof Player p)){sender.sendMessage(messages.text("err.playerOnly"));return true;}
         if(op.equals("cancel")){SignEvents.cancel(p);sender.sendMessage(messages.text("msg.cancelled"));return true;}
         if(!ownsEvents()){sender.sendMessage(messages.text("err.eventsNotOwned"));return true;}
         if(op.equals("set")){
+            if(args.length==1){SignEvents.openSetWindow(this,p);return true;}
             if(args.length!=3){sender.sendMessage(messages.text("err.usage",messages.text("cmd.sign.usageSet")));return true;}
             SignEvents.setDefinitionMode(p,args[1],args[2]);return true;
         }

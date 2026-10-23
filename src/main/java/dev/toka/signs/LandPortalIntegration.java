@@ -33,11 +33,11 @@ final class LandPortalIntegration {
             signs.registerAction(12, (player, sign) -> teleport(player, sign.code()));
             actionRegistered = true;
             registerRegionAndPoint(signs, portal);
-            signs.getLogger().info("已連接 tokaLand／tokaPortal；tpl、區域傳送與公共傳送點告示牌可用。");
+            signs.getLogger().info(Main.tr("log.landConnected"));
             return true;
         } catch (ReflectiveOperationException | LinkageError | RuntimeException error) {
             close(signs);
-            signs.getLogger().warning("tokaLand／tokaPortal API 不可用；tpl 告示牌暫停：" + error.getClass().getSimpleName());
+            signs.getLogger().warning(Main.tr("log.landUnavailable", error.getClass().getSimpleName()));
             return false;
         }
     }

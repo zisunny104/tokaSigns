@@ -18,6 +18,8 @@ public final class SignEvents implements Listener {
     private static final Map<UUID,Pending> edits=new HashMap<>();
     private static final Map<UUID,Setup> setups=new HashMap<>();
     private static final Map<UUID,String[]> clips=new HashMap<>();
+    private record SetWindow(cn.nukkit.form.window.FormWindowCustom form,List<Integer> types){}
+    private static final Map<UUID,SetWindow> setWindows=new HashMap<>();
     private static final Map<String,Integer> TYPES=Map.of("tpr",10,"tpp",11,"tpl",12,"tps",13,"pay",21,"b",31,"s",32,"item",33,"status",41);
     private static final UseNotice notice=new UseNotice(2000);
     private void notifyFailed(Player p){
@@ -27,8 +29,19 @@ public final class SignEvents implements Listener {
     SignEvents(Main main){this.main=main;}
     static void setMode(Player p,String mode){if(mode.equals("paste")&&!clips.containsKey(p.getUniqueId())){p.sendMessage(Main.tr("msg.copyFirst"));return;}modes.put(p.getUniqueId(),mode);p.sendMessage(Main.tr("msg.clickToDo",Main.tr(switch(mode){case "copy"->"status.mode.copy";case "paste"->"status.mode.paste";case "edit"->"status.mode.edit";default->"status.mode.set";})));}
     static void firePrepared(Main main,SignChangeEvent event){prepared.add(event);try{main.getServer().getPluginManager().callEvent(event);}finally{prepared.remove(event);}}
-    static void cancel(Player p){modes.remove(p.getUniqueId());edits.remove(p.getUniqueId());setups.remove(p.getUniqueId());}
-    static void clear(){notice.clear();modes.clear();clips.clear();edits.clear();setups.clear();}
+    static void cancel(Player p){modes.remove(p.getUniqueId());edits.remove(p.getUniqueId());setups.remove(p.getUniqueId());setWindows.remove(p.getUniqueId());}
+    static void clear(){notice.clear();modes.clear();clips.clear();edits.clear();setups.clear();setWindows.clear();}
+    /** The set window lists only the types this player may define and whose provider is ready; it then runs the same path as /sign set. */
+    static void openSetWindow(Main main,Player p){
+        var types=new ArrayList<Integer>();var labels=new ArrayList<String>();
+        for(var entry:SignTypeSelector.NAMES.entrySet())if(main.canDefine(p,entry.getKey())){types.add(entry.getKey());labels.add(entry.getValue()+" ("+entry.getKey()+")");}
+        if(types.isEmpty()){p.sendMessage(Main.tr("err.typeNotAuthorized"));return;}
+        var form=new cn.nukkit.form.window.FormWindowCustom(Main.tr("ui.set.title"));
+        form.addElement(new cn.nukkit.form.element.ElementLabel(Main.tr("ui.set.hint")));
+        form.addElement(new cn.nukkit.form.element.ElementDropdown(Main.tr("ui.set.type"),labels));
+        form.addElement(new cn.nukkit.form.element.ElementInput(Main.tr("ui.set.code"),Main.tr("ui.set.codeHint"),""));
+        setWindows.put(p.getUniqueId(),new SetWindow(form,types));p.showFormWindow(form);
+    }
     static void setDefinitionMode(Player p,String type,String code){
         Integer n=TYPES.get(type.toLowerCase(Locale.ROOT));if(type.equalsIgnoreCase("buy"))n=31;if(type.equalsIgnoreCase("sell"))n=32;
         if(n==null)try{n=Integer.parseInt(type);}catch(NumberFormatException ignored){}
@@ -54,7 +67,15 @@ public final class SignEvents implements Listener {
         main.getRegistry().upsert(r);main.applySignText(sign,event.getLines());p.sendMessage(Main.tr("msg.setDone"));
     }
     @EventHandler public void form(PlayerFormRespondedEvent event){
-        Player p=event.getPlayer();Pending pending=edits.get(p.getUniqueId());if(pending==null||event.getWindow()!=pending.form())return;edits.remove(p.getUniqueId());
+        Player p=event.getPlayer();
+        SetWindow window=setWindows.get(p.getUniqueId());
+        if(window!=null&&event.getWindow()==window.form()){
+            setWindows.remove(p.getUniqueId());
+            if(event.wasClosed()||!(event.getResponse() instanceof cn.nukkit.form.response.FormResponseCustom answer))return;
+            int index=answer.getDropdownResponse(1).getElementID();String code=answer.getInputResponse(2);
+            if(index<0||index>=window.types().size()||code==null||code.isBlank()){p.sendMessage(Main.tr("err.usage",Main.tr("cmd.sign.usageSetShort")));return;}
+            setDefinitionMode(p,String.valueOf(window.types().get(index)),code.trim());return;
+        }Pending pending=edits.get(p.getUniqueId());if(pending==null||event.getWindow()!=pending.form())return;edits.remove(p.getUniqueId());
         if(event.wasClosed()||!main.ownsEvents()||!Main.permits(p,"edit")||!(event.getResponse() instanceof cn.nukkit.form.response.FormResponseCustom response))return;
         var world=main.getServer().getLevelByName(pending.world());if(world==null||world!=p.getLevel()||!world.isChunkLoaded(pending.x()>>4,pending.z()>>4))return;
         var b=world.getBlock(pending.x(),pending.y(),pending.z());if(p.distance(b)>8)return;
@@ -112,7 +133,7 @@ public final class SignEvents implements Listener {
     }
     @EventHandler(priority=EventPriority.HIGHEST,ignoreCancelled=true)
     public void broken(BlockBreakEvent event){if(!main.ownsEvents())return;var r=record(event.getBlock());if(r==null)return;if(!main.allowed(event.getPlayer(),r,"break")){event.setCancelled();return;}try{main.getRegistry().removeRecord(r.id());}catch(Exception error){event.setCancelled();main.getLogger().warning(Main.tr("log.deleteFailed",error.getClass().getSimpleName()));}}
-    @EventHandler public void quit(PlayerQuitEvent e){modes.remove(e.getPlayer().getUniqueId());clips.remove(e.getPlayer().getUniqueId());edits.remove(e.getPlayer().getUniqueId());setups.remove(e.getPlayer().getUniqueId());}
+    @EventHandler public void quit(PlayerQuitEvent e){modes.remove(e.getPlayer().getUniqueId());clips.remove(e.getPlayer().getUniqueId());edits.remove(e.getPlayer().getUniqueId());setups.remove(e.getPlayer().getUniqueId());setWindows.remove(e.getPlayer().getUniqueId());}
 }
 
 

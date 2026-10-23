@@ -11,6 +11,8 @@ final class SignTypeSelector {
         Map.entry("pay",21),Map.entry("b",31),Map.entry("buy",31),Map.entry("s",32),
         Map.entry("sell",32),Map.entry("item",33),Map.entry("status",41)
     );
+    /** Canonical word of each type, by id; used for Tab completion and the set window. */
+    static final Map<Integer,String> NAMES=new java.util.TreeMap<>(Map.of(10,"tpr",11,"tpp",12,"tpl",13,"tps",21,"pay",31,"buy",32,"sell",33,"item",41,"status"));
     private static final Set<Integer> IDS=Set.copyOf(TYPES.values());
     private SignTypeSelector(){}
     static Integer parse(String value){

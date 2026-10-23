@@ -1,6 +1,6 @@
 name: tokaSigns
 main: dev.toka.signs.Main
-version: "0.4.18"
+version: "0.4.19"
 api: ["1.0.4"]
 author: zisunny104
 softdepend: [tokaRegions, tokaLand, tokaPortal, tokaDisplay]
@@ -9,7 +9,7 @@ commands:
   sign:
     aliases: [signs]
     description: 告示牌管理與複製貼上
-    usage: "/sign <help|status|edit|copy|paste|set|cancel|inspect|check|refresh|repair|fix|jobs> [參數]（/sign help 查看完整說明）"
+    usage: "/sign <help|status|edit|copy|paste|set|cancel|inspect|check|refresh|repair|fix|jobs|reload> [參數]（/sign help 查看完整說明）"
 permissions:
   tokaSigns.admin:
     description: 告示牌整體管理權限，視為擁有下列所有權限
@@ -20,6 +20,9 @@ permissions:
   tokaSigns.cancel:
     description: 使用 /sign cancel 取消待選取的操作
     default: true
+  tokaSigns.reload:
+    description: 使用 /sign reload 重讀設定與語言
+    default: op
   tokaSigns.status:
     description: 使用 /sign status 查看登記數、事件接管與保護 provider
     default: op

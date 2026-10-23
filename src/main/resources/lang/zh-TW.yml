@@ -39,6 +39,7 @@ help:
   sign:
     - "*|§6=== §f§ltokaSigns 說明§r §6=== §7（別名 /signs；<必填>、[選填]）"
     - "help|§e/sign help §7- §b顯示此說明"
+    - "reload|§e/sign reload §7- §b重讀設定與語言，重接傳送插件"
     - "status|§e/sign status §7- §b登記數、事件接管及保護 provider"
     - "inspect|§e/sign inspect <ID> [--force] §7- §b位置、牌面與功能設定對照"
     - "check|§e/sign check <ID|all> [--force] §7- §b分批唯讀檢查"
@@ -52,16 +53,20 @@ help:
     - "p:paste|§e/sign paste §7- §b點選一般牌貼上文字"
     - "p:cancel|§e/sign cancel §7- §b取消操作，保留剪貼簿"
     - "p:set|§e/sign set <類型名稱或正整數ID> <單一代碼> §7- §b點選設定功能；代碼不可含空白，狀態牌填 -"
+    - "p:set|§e/sign set §7- §b開啟視窗，選類型並填代碼"
     - "p:set|§7目前有設定權限且 provider 已就緒的類型：§a${0}§7（可直接填數字ID）"
     - "set|§6§l直接填寫告示牌 §6[ §f第1行 | 第2行 | 第3行 | 第4行§6 ]"
     - "set|§7<參數> 必填，[參數] 選填。外框、標記及 | 不用輸入，「留空」不填字"
     - "type.10|§6[ §ftpr | <區域代碼> | 留空 | 留空§6 ] §7- §b區域傳送"
     - "type.11|§6[ §ftpp | <傳送點名稱> | 留空 | 留空§6 ] §7- §b公共傳送點"
     - "type.12|§6[ §ftpl | <領地UUID> | 留空 | 留空§6 ] §7- §b領地傳送（使用 /land list 查 ID）"
+    - "type.13|§6[ §ftps | <代碼> | 留空 | 留空§6 ] §7- §b傳送牌（需功能插件提供）"
+    - "type.21|§6[ §fpay | <代碼> | 留空 | 留空§6 ] §7- §b付費牌（需功能插件提供）"
     - "type.31|§6[ §fb | <商品代碼> | 留空 | 留空§6 ] §7- §b購買商品"
     - "type.32|§6[ §fs | <商品代碼> | 留空 | 留空§6 ] §7- §b回收商品"
     - "type.33|§6[ §fitem | 留空 | 留空 | 留空§6 ] §7- §b物品管理入口"
     - "type.41|§6[ §fstatus | 留空 | 留空 | 留空§6 ] §7- §b伺服器狀態"
+    - "break|§e破壞功能牌 §7- §b需要 tokaSigns.break 權限"
     - "*|§7顯示指令權限不代表任何位置都可修改；仍檢查保護服務、功能 provider 與接管狀態"
 
 # ───────────────────────── 玩家／指令訊息（msg） ─────────────────────────
@@ -87,6 +92,7 @@ msg:
   clickToDo: "§7[告示]§r §b點選告示牌進行§a${0}"
   # 頂部訊息區（tokaDisplay）顯示的單行提示，不含前綴
   useFailed: "這個告示牌的目標目前無法使用"
+  reloaded: "§7[告示]§r §a已重新載入設定與語言。"
   # 設定完成
   setDone: "§7[告示]§r §a功能設定完成。"
   # 複製／貼上完成
@@ -138,6 +144,12 @@ ui:
     line: "第 ${0} 行"
     # 功能牌的代碼輸入框標籤
     code: "功能代碼"
+  set:
+    title: "設定功能牌"
+    hint: "選類型、填代碼，送出後點選告示牌"
+    type: "類型"
+    code: "代碼"
+    codeHint: "不可含空白，狀態牌填 -"
   # 狀態牌（type 41）牌面四行；牌面有自己的樣式，不套用訊息色碼慣例
   statusSign:
     title: "§r§a⦋狀態⦌§r"
@@ -150,6 +162,10 @@ ui:
 
 # ───────────────────────── 後台文字（log） ─────────────────────────
 log:
+  noCommand: "§e找不到 §a/sign§e 指令，無法設定候選"
+  landConnected: "§b已連接 §atokaLand§b 與 §atokaPortal§b，tpl 與傳送牌可用"
+  # ${0}＝例外類別名稱
+  landUnavailable: "§etokaLand／tokaPortal 不可用，tpl 牌暫停：§a${0}"
   # 啟動完成；${0}＝載入的告示牌數
   loaded: "§b載入告示牌共 §a${0} §b個"
   storageFailed: "§c告示牌儲存無法載入"

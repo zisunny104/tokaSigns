@@ -43,7 +43,7 @@ final class LandPortalIntegration {
     }
 
 
-    private static Method portalRegion, portalPoint, publicPoints, findPoint, regionId;
+    private static Method portalRegion, portalPoint, publicPoints, findPoint;
 
     /** Region signs (10) and public point signs (11): the sign holds the name; tokaPortal does the teleport. */
     private static void registerRegionAndPoint(Main signs, Plugin portal) throws ReflectiveOperationException {
@@ -51,8 +51,6 @@ final class LandPortalIntegration {
         portalRegion = portalApi.getMethod("toRegion", String.class, Player.class);
         portalPoint = portalApi.getMethod("toPoint", String.class, Player.class);
         publicPoints = portal.getClass().getMethod("getPublicPoints");
-        Plugin regions = enabled("tokaRegions");
-        if (regions != null) regionId = Class.forName("dev.toka.regions.Main", false, regions.getClass().getClassLoader()).getMethod("regionIdByName", String.class);
         signs.registerDisplayDataProvider(10, (player, sign) -> regionDisplay(sign.code()));
         signs.registerAction(10, (player, sign) -> regionKnown(sign.code()) && call(portalRegion, sign.code(), player));
         signs.registerDisplayDataProvider(11, (player, sign) -> pointDisplay(sign.code()));
@@ -67,16 +65,36 @@ final class LandPortalIntegration {
         catch (ReflectiveOperationException | LinkageError | RuntimeException error) { return false; }
     }
 
-    private static boolean regionKnown(String name) {
-        if (regionId == null || name == null) return false;
-        try { return regionId.invoke(null, name) != null; } catch (ReflectiveOperationException | LinkageError | RuntimeException error) { return false; }
+    /** The region of tokaRegions with this name, looked up when a sign is used: tokaRegions may start after this plugin. */
+    private static Object region(String name) {
+        Plugin regions = enabled("tokaRegions");
+        if (regions == null || name == null) return null;
+        try {
+            Object index = regions.getClass().getMethod("regions").invoke(regions);
+            Object found = index.getClass().getMethod("byName", String.class).invoke(index, name);
+            return found instanceof java.util.Optional<?> value && value.isPresent() ? value.get() : null;
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException error) { return null; }
     }
 
+    private static boolean regionKnown(String name) { return region(name) != null; }
+
+    /** What the sign shows for a region: the name written for the server's language, with its colour, else the plain name */
     private static String regionDisplay(String name) {
-        if (!regionKnown(name)) return null;
+        Object region = region(name);
+        if (region == null) return null;
+        String shown = name;
+        try {
+            Object names = region.getClass().getMethod("localizedNames").invoke(region);
+            if (names instanceof java.util.Map<?, ?> map && !map.isEmpty()) {
+                Object text = map.get("zh-TW");
+                if (text == null) text = map.values().iterator().next();
+                Object color = region.getClass().getMethod("color").invoke(region);
+                shown = (color == null ? "" : color.toString()) + text;
+            }
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException keepPlain) { /* the plain name stays */ }
         JsonObject data = new JsonObject();
-        data.addProperty("name", name);
-        data.addProperty("info", name);
+        data.addProperty("name", shown);
+        data.addProperty("info", shown);
         return data.toString();
     }
 

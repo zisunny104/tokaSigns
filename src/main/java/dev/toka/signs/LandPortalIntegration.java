@@ -18,7 +18,9 @@ final class LandPortalIntegration {
 
     private LandPortalIntegration() {}
 
+    /** Connects once; a second call while connected does nothing, so the start line is not printed twice. */
     static boolean connect(Main signs) {
+        if (actionRegistered) return true;
         Plugin land = enabled("tokaLand");
         Plugin portal = enabled("tokaPortal");
         if (land == null || portal == null) return false;

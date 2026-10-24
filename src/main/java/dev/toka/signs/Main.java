@@ -80,7 +80,7 @@ public final class Main extends PluginBase implements cn.nukkit.event.Listener {
     }
     /** Runs on the next tick so the plugin that just enabled has finished its own start. */
     private void reconnectIntegrations(){
-        getServer().getScheduler().scheduleTask(this,()->{if(!isEnabled())return;LandPortalIntegration.close(this);LandPortalIntegration.connect(this);queueCommandRefresh();});
+        getServer().getScheduler().scheduleTask(this,()->{if(!isEnabled())return;LandPortalIntegration.connect(this);queueCommandRefresh();});
     }
     private void reloadSettings(){
         reloadConfig();

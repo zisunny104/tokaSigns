@@ -37,6 +37,7 @@ public final class SignEvents implements Listener {
         for(var entry:SignTypeSelector.NAMES.entrySet())if(main.canDefine(p,entry.getKey())){types.add(entry.getKey());labels.add(entry.getValue()+" ("+entry.getKey()+")");}
         if(types.isEmpty()){p.sendMessage(Main.tr("err.typeNotAuthorized"));return;}
         var form=new cn.nukkit.form.window.FormWindowCustom(Main.tr("ui.set.title"));
+        form.addElement(new cn.nukkit.form.element.ElementHeader(Main.tr("ui.set.title")));
         form.addElement(new cn.nukkit.form.element.ElementLabel(Main.tr("ui.set.hint")));
         form.addElement(new cn.nukkit.form.element.ElementDropdown(Main.tr("ui.set.type"),labels));
         form.addElement(new cn.nukkit.form.element.ElementInput(Main.tr("ui.set.code"),Main.tr("ui.set.codeHint"),""));
@@ -52,7 +53,7 @@ public final class SignEvents implements Listener {
     private static boolean mainInstanceCanDefine(Player p,int type){return ((Main)p.getServer().getPluginManager().getPlugin("tokaSigns")).canDefine(p,type);}
     private void openEdit(Player p,Block b,BlockEntitySign sign,SignRegistry.SignRecord r){
         if(!main.allowed(p,r==null?plain(b):r,"edit")){p.sendMessage(Main.tr("err.noEditHere"));return;}
-        var form=new cn.nukkit.form.window.FormWindowCustom(Main.tr("ui.edit.title"));String[] text=sign.getText().clone();
+        var form=new cn.nukkit.form.window.FormWindowCustom(Main.tr("ui.edit.title"));String[] text=sign.getText().clone();form.addElement(new cn.nukkit.form.element.ElementHeader(Main.tr("ui.edit.title")));
         if(r==null)for(int i=0;i<4;i++)form.addElement(new cn.nukkit.form.element.ElementInput(Main.tr("ui.edit.line",i+1),"",text[i]));
         else form.addElement(new cn.nukkit.form.element.ElementInput(Main.tr("ui.edit.code"),"",r.code()==null?"":r.code()));
         edits.put(p.getUniqueId(),new Pending(r==null?b.getLevel().getFolderName():r.world(),b.getFloorX(),b.getFloorY(),b.getFloorZ(),form,text,r));p.showFormWindow(form);
@@ -72,7 +73,7 @@ public final class SignEvents implements Listener {
         if(window!=null&&event.getWindow()==window.form()){
             setWindows.remove(p.getUniqueId());
             if(event.wasClosed()||!(event.getResponse() instanceof cn.nukkit.form.response.FormResponseCustom answer))return;
-            int index=answer.getDropdownResponse(1).getElementID();String code=answer.getInputResponse(2);
+            int index=answer.getDropdownResponse(2).getElementID();String code=answer.getInputResponse(3);
             if(index<0||index>=window.types().size()||code==null||code.isBlank()){p.sendMessage(Main.tr("err.usage",Main.tr("cmd.sign.usageSetShort")));return;}
             setDefinitionMode(p,String.valueOf(window.types().get(index)),code.trim());return;
         }Pending pending=edits.get(p.getUniqueId());if(pending==null||event.getWindow()!=pending.form())return;edits.remove(p.getUniqueId());
@@ -82,8 +83,8 @@ public final class SignEvents implements Listener {
         var entity=world.getBlockEntity(b);if(!(entity instanceof BlockEntitySign sign)||!Arrays.equals(sign.getText(),pending.text())||!Objects.equals(record(b),pending.record())){p.sendMessage(Main.tr("err.signChanged"));return;}
         if(!main.allowed(p,pending.record()==null?plain(b):pending.record(),"edit"))return;
         try{
-            if(pending.record()!=null){applyDefinition(p,b,sign,pending.record().type(),response.getInputResponse(0));return;}
-            String[] lines=new String[4];for(int i=0;i<4;i++){lines[i]=response.getInputResponse(i);if(lines[i]==null||lines[i].length()>2048)return;}
+            if(pending.record()!=null){applyDefinition(p,b,sign,pending.record().type(),response.getInputResponse(1));return;}
+            String[] lines=new String[4];for(int i=0;i<4;i++){lines[i]=response.getInputResponse(i+1);if(lines[i]==null||lines[i].length()>2048)return;}
             var change=new SignChangeEvent(b,p,lines);main.getServer().getPluginManager().callEvent(change);if(!change.isCancelled())sign.setText(change.getLines());
         }catch(Exception|LinkageError error){main.getLogger().warning(Main.tr("log.formFailed",error.getClass().getSimpleName()));}
     }

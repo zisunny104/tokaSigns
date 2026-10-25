@@ -63,18 +63,11 @@ public final class SignRegistry implements AutoCloseable {
             if(!store.load("registry").orElseThrow().equals(doc))throw new IOException("Registry readback mismatch");
         }catch(IOException|RuntimeException error){writeError.accept(error);}
     }
-    public synchronized void replaceIfEmptyOrEqual(String json)throws IOException{
-        JsonArray rows=JsonParser.parseString(json).getAsJsonArray();
-        if(source!=null&&!source.isEmpty()&&!source.equals(rows))throw new IllegalStateException("Destination differs; no overwrite");
-        replaceRecords(json);
-    }
-    public synchronized String recordsJson(){return source==null?"[]":source.toString();}
     public synchronized void upsert(SignRecord record)throws IOException{
         JsonArray rows=source==null?new JsonArray():source.deepCopy();
         for(int i=rows.size()-1;i>=0;i--)if(rows.get(i).getAsJsonObject().get("id").getAsInt()==record.id())rows.remove(i);
         rows.add(encode(record));replaceRecords(rows.toString());
     }
-    public synchronized void upsertRecord(String json)throws IOException{upsert(parse(JsonParser.parseString(json).getAsJsonObject()));}
     public synchronized void removeRecord(int id)throws IOException{
         JsonArray rows=source==null?new JsonArray():source.deepCopy();
         for(int i=rows.size()-1;i>=0;i--)if(rows.get(i).getAsJsonObject().get("id").getAsInt()==id)rows.remove(i);

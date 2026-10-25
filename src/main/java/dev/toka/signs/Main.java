@@ -93,14 +93,8 @@ public final class Main extends PluginBase implements cn.nukkit.event.Listener {
         if(!instance.getServer().isPrimaryThread())throw new IllegalStateException("Sign API requires server thread");
         return instance;
     }
-    public static boolean isActionsEnabled(){return service().getConfig().getBoolean("actions.enabled",true);}
-    public static boolean serviceReady(){return instance!=null&&instance.isEnabled()&&instance.registry!=null;}
-    public static boolean readyForTypes(int[] types){Main m=service();for(int t:types)if(!m.actions.containsKey(t))return false;return true;}
     public static SignRegistry getRegistry(){return service().registry;}
-    public static void replaceRecords(String json)throws Exception{service().registry.replaceIfEmptyOrEqual(json);}
-    public static String recordsJson(){return service().registry.recordsJson();}
-    public static void upsertRecord(String json)throws Exception{service().registry.upsertRecord(json);}
-    public static void removeRecord(int id)throws Exception{service().registry.removeRecord(id);}
+    // API: other plugins, see README
     public static void registerPolicy(String owner,Policy policy){
         Main main=service();if(owner==null||owner.isBlank())throw new IllegalArgumentException("owner");
         if(main.policyOwner!=null&&!main.policyOwner.equals(owner))throw new IllegalStateException("A policy provider already exists");
@@ -109,6 +103,7 @@ public final class Main extends PluginBase implements cn.nukkit.event.Listener {
     public static void unregisterPolicy(String owner){Main m=service();if(Objects.equals(m.policyOwner,owner)){m.policyOwner=null;m.policy=null;}}
     public static void registerAction(int type,Action action){if(service().actions.putIfAbsent(type,Objects.requireNonNull(action))!=null)throw new IllegalStateException("Handler already registered");service().queueCommandRefresh();}
     public static void unregisterAction(int type){service().actions.remove(type);service().queueCommandRefresh();}
+    // API: other plugins, see README
     public static void registerDefinition(int type,Definition definition){if(service().definitions.putIfAbsent(type,Objects.requireNonNull(definition))!=null)throw new IllegalStateException("Definition already registered");service().queueCommandRefresh();}
     public static void unregisterDefinition(int type){service().definitions.remove(type);service().queueCommandRefresh();}
     public static void registerDisplayDataProvider(int type,DisplayDataProvider provider){
@@ -143,7 +138,6 @@ public final class Main extends PluginBase implements cn.nukkit.event.Listener {
         Action a=m.actions.get(sign.type());return a!=null&&a.execute(player,sign);
     }
     boolean hasDefinition(int type){if(type==12&&!ownsEvents())return false;return type==41||type==33||displayDataProviders.containsKey(type)||definitions.containsKey(type);}
-    boolean hasPolicy(){return policy!=null;}
     /** Single-record inspection; force may synchronously load one existing chunk. Prefer jobs for bulk work. */
     public static String inspectSign(int id,CommandSender actor,boolean force){
         Main m=service();if(!permits(actor,"inspect"))throw new IllegalArgumentException(tr("err.ex.noInspectPermission"));

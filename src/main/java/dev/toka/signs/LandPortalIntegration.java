@@ -45,7 +45,7 @@ final class LandPortalIntegration {
     }
 
 
-    private static Method portalRegion, portalPoint, publicPoints, findPoint;
+    private static Method portalRegion, portalPoint, publicPoints;
 
     /** Region signs (10) and public point signs (11): the sign holds the name; tokaPortal does the teleport. */
     private static void registerRegionAndPoint(Main signs, Plugin portal) throws ReflectiveOperationException {

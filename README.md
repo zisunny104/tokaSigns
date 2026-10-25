@@ -77,8 +77,6 @@
 | `registerAction` / `unregisterAction` | 類型 ID、`Action` | 提供該類型功能牌被點擊時的動作 |
 | `registerDisplayDataProvider` / `unregisterDisplayDataProvider` | 類型 ID、`DisplayDataProvider` | 提供 JSON 業務資料；牌面文字與色碼由 tokaSigns 按舊版格式產生 |
 | `registerDefinition` / `unregisterDefinition` | 類型 ID、`Definition` | 相容舊版或自訂功能牌格式；內建類型 10、11、12、31、32、33 由 tokaSigns 格式器優先處理 |
-| `serviceReady` | 無 | 確認本插件已就緒 |
-| `isActionsEnabled` | 無 | 目前是否由本插件接管事件 |
 
 `DisplayDataProvider.resolve` 回傳 JSON 字串。傳送類型 10、11 使用 `info`，類型 12 使用 `name`；購買／回收類型 31、32 使用 `itemName`、`quantity`、`amount`。provider 只負責提供仍由其他插件管理的資料，不應回傳已排版的告示牌文字。tokaSigns 產生與舊版成功使用後相同的動態版型，修復時也會重新讀取 provider 資料。類型 12 以 claim UUID 作為代碼、由 tokaLand 供應名稱、由 tokaPortal 執行傳送；任一 API 不可用時該類型不會出現在設定候選中。傳送類型 10、11、12 直接呼叫 tokaPortal；沒有註冊政策時以權限為準。
 

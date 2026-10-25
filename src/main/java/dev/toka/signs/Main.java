@@ -82,8 +82,9 @@ public final class Main extends PluginBase implements cn.nukkit.event.Listener {
     private void reconnectIntegrations(){
         getServer().getScheduler().scheduleTask(this,()->{if(!isEnabled())return;LandPortalIntegration.connect(this);queueCommandRefresh();});
     }
+    private final WarnOnce warned=new WarnOnce();
     private void reloadSettings(){
-        reloadConfig();
+        reloadConfig();warned.clear();
         messages.language(getConfig().getString("language","zh-TW"));
         LandPortalIntegration.close(this);LandPortalIntegration.connect(this);
         configureCommandSuggestions();
@@ -214,7 +215,7 @@ public final class Main extends PluginBase implements cn.nukkit.event.Listener {
             var world=getServer().getLevelByName(r.world());
             if(world==null||!world.isChunkLoaded(r.x()>>4,r.z()>>4))continue;
             var entity=world.getBlockEntity(new cn.nukkit.math.Vector3(r.x(),r.y(),r.z()));
-            if(entity instanceof cn.nukkit.blockentity.BlockEntitySign sign)try{applySignText(sign,statusLines());}catch(RuntimeException error){getLogger().warning(messages.text("log.statusUpdateFailed",r.id()));}
+            if(entity instanceof cn.nukkit.blockentity.BlockEntitySign sign)try{applySignText(sign,statusLines());}catch(RuntimeException error){if(warned.first("status:"+r.id()))getLogger().warning(messages.text("log.statusUpdateFailed",r.id()));}
         }
     }
     public void onDisable(){LandPortalIntegration.close(this);if(maintenance!=null)maintenance.close();instance=null;actions.clear();definitions.clear();displayDataProviders.clear();SignEvents.clear();policy=null;if(registry!=null)try{registry.close();}catch(Exception error){getLogger().warning(messages.text("log.storageCloseFailed"));}}

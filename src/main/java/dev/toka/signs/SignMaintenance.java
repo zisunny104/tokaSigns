@@ -71,6 +71,14 @@ final class SignMaintenance {
                 expected=change.getLines();
             }
             if(!Objects.equals(Main.getRegistry().byId(id).orElse(null),r)||world.getBlockEntity(pos)!=sign||!Arrays.equals(before,sign.getText()))return result(out,"CHANGED_DURING_CHECK");
+            // A sign whose text really changes first shows the layout it is written in (type word and code), then the display layout, so the change can be seen.
+            String[] lead=flashLayout(r);
+            if(lead!=null&&!Arrays.equals(before,expected)&&!Arrays.equals(before,lead)&&main.getConfig().getBoolean("maintenance.fix-flash.enabled",true)){
+                sign.setText(lead);sign.spawnToAll();
+                scheduleFlashEnd(world,r,sign,lead,expected,expectedGlowing);
+                out.add("afterText",GSON.toJsonTree(lead));out.addProperty("afterGlowing",beforeGlowing);
+                return result(out,"UPDATED");
+            }
             sign.setGlowing(expectedGlowing);
             if(!Arrays.equals(expected,sign.getText()))sign.setText(expected);
             // Always resend, including when setText is a no-op or another update only changed glow.
@@ -78,6 +86,21 @@ final class SignMaintenance {
             out.add("afterText",GSON.toJsonTree(sign.getText()));out.addProperty("afterGlowing",sign.isGlowing());
             return result(out,Arrays.equals(expected,sign.getText())&&sign.isGlowing()==expectedGlowing?(textMatches&&glowMatches?"RESENT":"UPDATED"):"UPDATE_REJECTED");
         }catch(Exception|LinkageError error){out.addProperty("error",error.getClass().getSimpleName());return result(out,"PROVIDER_ERROR");}
+    }
+    /** The word a sign of the type is written with on its first line. */
+    private static final Map<Integer,String> WORDS=Map.of(10,"tpr",11,"tpp",12,"tpl",13,"tps",21,"pay",31,"b",32,"s",33,"item",41,"status");
+    /** The layout the sign is written in: the type word, then the code; null for a type that has no such writing. */
+    static String[] flashLayout(SignRegistry.SignRecord r){
+        String word=WORDS.get(r.type());
+        return word==null?null:new String[]{word,r.code()==null?"":r.code(),"",""};
+    }
+    private void scheduleFlashEnd(cn.nukkit.level.Level world,SignRegistry.SignRecord r,BlockEntitySign sign,String[] lead,String[] expected,boolean glowing){
+        int ticks=Math.max(1,Math.min(100,main.getConfig().getInt("maintenance.fix-flash.ticks",12)));
+        main.getServer().getScheduler().scheduleDelayedTask(main,new cn.nukkit.scheduler.Task(){public void onRun(int tick){
+            // If anything changed meanwhile the sign is left alone; a later pass fixes it again.
+            if(!main.isEnabled()||sign.closed||world.getBlockEntity(new Vector3(r.x(),r.y(),r.z()))!=sign||!Arrays.equals(sign.getText(),lead))return;
+            sign.setGlowing(glowing);sign.setText(expected);sign.spawnToAll();
+        }},ticks);
     }
     private static boolean validText(String[] lines){return lines!=null&&lines.length==4&&Arrays.stream(lines).noneMatch(Objects::isNull);}
     private JsonObject result(JsonObject out,String status){out.addProperty("status",status);return out;}

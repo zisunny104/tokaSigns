@@ -67,6 +67,8 @@
 | `maintenance.auto-clean.interval-minutes` | `10` | 兩次檢查相隔分鐘數 |
 | `maintenance.auto-clean.confirm-passes` | `3` | 連續幾次檢查都沒有牌子才移除（2 以上） |
 | `maintenance.auto-clean.max-per-pass` | `20` | 一次最多移除幾筆，超過整批不動 |
+| `maintenance.fix-flash.enabled` | `true` | 修復牌面時先閃一下輸入排版（類型字與代碼），再換成顯示排版 |
+| `maintenance.fix-flash.ticks` | `12` | 輸入排版停留的 tick 數（1–100） |
 | `maintenance.auto-clean.repair` | `true` | 牌子還在但資料遺失或牌面不符時自動修復 |
 | `maintenance.auto-clean.log-keep-days` | `14` | removed-signs.log 保留天數，0 表示不刪 |
 | `maintenance.normal.max-records` | `32` | 一般維護每 tick 最多處理幾筆（1–128） |

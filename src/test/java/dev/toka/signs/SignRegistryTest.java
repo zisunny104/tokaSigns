@@ -24,6 +24,13 @@ public class SignRegistryTest {
    signs.removeRecord(7);assertTrue(signs.records().isEmpty());
   }
   try(var signs=new SignRegistry(config)){assertTrue(signs.records().isEmpty());}
+ }
+ @Test public void removesSeveralRecordsInOneWrite()throws Exception{
+  var config=new StoreConfig(Backend.SQLITE,Files.createTempDirectory("signs-many-"),1);
+  String rows="["+DATA.substring(1,DATA.length()-1)+","+DATA.substring(1,DATA.length()-1).replace("\"id\":7","\"id\":8").replace("\"x\":-1","\"x\":-2")+","+DATA.substring(1,DATA.length()-1).replace("\"id\":7","\"id\":9").replace("\"x\":-1","\"x\":-3")+"]";
+  try(var signs=new SignRegistry(config)){
+   signs.replaceRecords(rows);assertEquals(3,signs.size());
+   signs.removeRecords(java.util.List.of(7,9));
+   assertEquals(java.util.Set.of(8),signs.records().stream().map(SignRegistry.SignRecord::id).collect(java.util.stream.Collectors.toSet()));
+  }
  }}
-
-

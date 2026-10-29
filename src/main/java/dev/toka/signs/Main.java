@@ -18,6 +18,7 @@ public final class Main extends PluginBase implements cn.nukkit.event.Listener {
     private static Main instance;
     private SignRegistry registry;
     private SignMaintenance maintenance;
+    private OrphanCleaner cleaner;
     private Messages messages;
     private Policy policy;
     private String policyOwner;
@@ -31,13 +32,15 @@ public final class Main extends PluginBase implements cn.nukkit.event.Listener {
             var backend=Backend.valueOf(getConfig().getString("storage.backend","sqlite").toUpperCase(Locale.ROOT));
             registry=new SignRegistry(new StoreConfig(backend,getDataFolder().toPath().resolve("storage").resolve(backend.name().toLowerCase(Locale.ROOT)),1),error->getLogger().warning(messages.text("log.saveFailed",error.getClass().getSimpleName())));
             actions.put(41,(p,r)->true);definitions.put(41,(p,r,lines)->statusLines());
-            maintenance=new SignMaintenance(this);
-            getServer().getScheduler().scheduleRepeatingTask(this,new cn.nukkit.scheduler.Task(){public void onRun(int tick){maintenance.tick();}},1);
+            maintenance=new SignMaintenance(this);cleaner=new OrphanCleaner(this);
+            getServer().getScheduler().scheduleRepeatingTask(this,new cn.nukkit.scheduler.Task(){public void onRun(int tick){maintenance.tick();cleaner.tick();}},1);
             instance=this;LandPortalIntegration.connect(this);getServer().getPluginManager().registerEvents(new SignEvents(this),this);getServer().getPluginManager().registerEvents(this,this);configureCommandSuggestions();
             getServer().getScheduler().scheduleRepeatingTask(this,new cn.nukkit.scheduler.Task(){public void onRun(int tick){updateStatusSigns();}},25);
             getLogger().info(messages.text("log.loaded",registry.records().size()));
         }catch(Exception error){getLogger().error(messages.text("log.storageFailed"));throw new IllegalStateException("Sign storage could not be loaded; keep the original data",error);}
     }
+    boolean maintenanceRunning(){return maintenance!=null&&maintenance.running();}
+    OrphanCleaner cleaner(){return cleaner;}
     private void configureCommandSuggestions(){
         var command=getCommand("sign");
         if(command==null){getLogger().warning(messages.text("log.noCommand"));return;}
@@ -84,7 +87,7 @@ public final class Main extends PluginBase implements cn.nukkit.event.Listener {
     }
     private final WarnOnce warned=new WarnOnce();
     private void reloadSettings(){
-        reloadConfig();warned.clear();
+        reloadConfig();warned.clear();if(cleaner!=null)cleaner.reset();
         messages.language(getConfig().getString("language","zh-TW"));
         LandPortalIntegration.close(this);LandPortalIntegration.connect(this);
         configureCommandSuggestions();

@@ -73,6 +73,12 @@ public final class SignRegistry implements AutoCloseable {
         for(int i=rows.size()-1;i>=0;i--)if(rows.get(i).getAsJsonObject().get("id").getAsInt()==id)rows.remove(i);
         replaceRecords(rows.toString());
     }
+    /** Removes several records in one write. */
+    public synchronized void removeRecords(Collection<Integer> removed)throws IOException{
+        JsonArray rows=source==null?new JsonArray():source.deepCopy();
+        for(int i=rows.size()-1;i>=0;i--)if(removed.contains(rows.get(i).getAsJsonObject().get("id").getAsInt()))rows.remove(i);
+        replaceRecords(rows.toString());
+    }
     public Optional<SignRecord> byId(int id){return Optional.ofNullable(ids.get(id));}
     public int size(){return ids.size();}
     // Immutable map snapshot: O(1) setup, no full registry copy or per-tick scan.

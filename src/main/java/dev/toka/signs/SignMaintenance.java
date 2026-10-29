@@ -21,6 +21,7 @@ final class SignMaintenance {
         Map<String,Integer> counts=new TreeMap<>(); JsonArray samples=new JsonArray();
     }
     SignMaintenance(Main main){this.main=main;}
+    boolean running(){return job!=null&&job.state.equals("RUNNING");}
     JsonObject inspect(int id,CommandSender actor,boolean refresh,boolean force){
         var out=new JsonObject();out.addProperty("id",id);
         if(force&&!Main.permits(actor,"force"))return result(out,"DENIED");

@@ -106,7 +106,8 @@ public final class SignEvents implements Listener {
         Block b=event.getBlock();var r=record(b);Player p=event.getPlayer();String mode=modes.get(p.getUniqueId());
         if(event.isCancelled()&&(r==null||mode!=null))return;
         var entity=b.getLevel().getBlockEntity(b);
-        if(!(entity instanceof BlockEntitySign sign)){if(r!=null){event.setCancelled();p.sendMessage(Main.tr("err.signDataNotReady"));}return;}
+        // A record whose place holds no sign block any more is stale (the cleaner removes it); only a sign block with late data is told to wait.
+        if(!(entity instanceof BlockEntitySign sign)){if(r!=null&&OrphanCleaner.isSignBlock(b)){event.setCancelled();p.sendMessage(Main.tr("err.signDataNotReady"));}return;}
         if(mode!=null){
             event.setCancelled();
             if(!Main.permits(p,mode.equals("set")?"set":mode)){modes.remove(p.getUniqueId());setups.remove(p.getUniqueId());return;}
@@ -134,6 +135,13 @@ public final class SignEvents implements Listener {
     }
     @EventHandler(priority=EventPriority.HIGHEST,ignoreCancelled=true)
     public void broken(BlockBreakEvent event){if(!main.ownsEvents())return;var r=record(event.getBlock());if(r==null)return;if(!main.allowed(event.getPlayer(),r,"break")){event.setCancelled();return;}try{main.getRegistry().removeRecord(r.id());}catch(Exception error){event.setCancelled();main.getLogger().warning(Main.tr("log.deleteFailed",error.getClass().getSimpleName()));}}
+    /** A sign can only be placed where there was none, so a record at that place belongs to a sign that is gone and must not come back to life on the new one. */
+    @EventHandler(priority=EventPriority.MONITOR,ignoreCancelled=true)
+    public void placed(BlockPlaceEvent event){
+        if(!main.ownsEvents()||!OrphanCleaner.isSignBlock(event.getBlock()))return;
+        var r=record(event.getBlock());if(r==null)return;
+        main.cleaner().removeAndArchive(List.of(r),"replaced");
+    }
     @EventHandler public void quit(PlayerQuitEvent e){modes.remove(e.getPlayer().getUniqueId());clips.remove(e.getPlayer().getUniqueId());edits.remove(e.getPlayer().getUniqueId());setups.remove(e.getPlayer().getUniqueId());setWindows.remove(e.getPlayer().getUniqueId());}
 }
 

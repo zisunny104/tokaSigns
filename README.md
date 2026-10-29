@@ -7,7 +7,7 @@
 - **複製貼上**：複製一般告示牌的四行文字，貼到其他告示牌上。
 - **編輯牌面**：點選告示牌後編輯文字或功能代碼。
 - **功能牌**：在告示牌上寫入類型與代碼，玩家點一下就能執行，例如傳送到區域、前往公共傳送點、購買或回收商品、開啟物品管理、顯示伺服器狀態。實際動作由對應插件提供。
-- **自動清理**：背景定時檢查已載入區塊，牌子已經不在的登記資料（爆炸、活塞、指令、還原世界等造成）連續幾次檢查都找不到才自動移除；位置上仍是告示牌方塊的絕不移除；一次超過上限就整批不動並在後台提醒；移除的內容寫在 `plugins/tokaSigns/removed-signs.log`。新放的告示牌若位置上有舊資料，舊資料會一併移除，不會附到新牌上。
+- **自動清理**：背景定時檢查已載入區塊，牌子已經不在的登記資料（爆炸、活塞、指令、還原世界等造成）連續幾次檢查都找不到才自動移除；位置上仍是告示牌方塊的絕不移除；一次超過上限就整批不動並在後台提醒；移除的內容寫在 `plugins/tokaSigns/removed-signs.log`（超過 `log-keep-days` 天的行自動刪除），可以照內容補回。牌子還在但壞了不會移除資料：牌子的資料遺失就重建、牌面文字和登記不符就依登記重寫（`repair`）。新放的告示牌若位置上有舊資料，舊資料會一併移除，不會附到新牌上。
 - **維護檢查與修復**：`/sign check`、`/sign refresh`、`/sign repair` 以佇列分批檢查或重繪功能牌，依伺服器負載調整速度；修復可選類別或 `all`，並校正牌面文字與發光狀態。
   牌面更新會使用 provider 提供的「使用後」內容（最新區域、傳送點或商品資訊）；沒有專用更新格式時沿用新建牌面。
 
@@ -67,6 +67,8 @@
 | `maintenance.auto-clean.interval-minutes` | `10` | 兩次檢查相隔分鐘數 |
 | `maintenance.auto-clean.confirm-passes` | `3` | 連續幾次檢查都沒有牌子才移除（2 以上） |
 | `maintenance.auto-clean.max-per-pass` | `20` | 一次最多移除幾筆，超過整批不動 |
+| `maintenance.auto-clean.repair` | `true` | 牌子還在但資料遺失或牌面不符時自動修復 |
+| `maintenance.auto-clean.log-keep-days` | `14` | removed-signs.log 保留天數，0 表示不刪 |
 | `maintenance.normal.max-records` | `32` | 一般維護每 tick 最多處理幾筆（1–128） |
 | `maintenance.normal.budget-ms` | `2` | 一般維護每 tick 最多花費毫秒 |
 | `maintenance.normal.min-tps` | `17` | TPS 低於此值就暫停維護 |

@@ -40,6 +40,10 @@ maintenance:
     confirm-passes: 3
     # 一次檢查最多移除幾筆，超過就整批不動並在後台提醒，可填 1 以上的整數，預設 20
     max-per-pass: 20
+    # 牌子還在但壞了時是否自動修復：牌子的資料遺失就重建，牌面文字和登記不符就依登記重寫；絕不會因此移除登記資料。可填 true 或 false，預設 true
+    repair: true
+    # removed-signs.log 保留幾天，超過的行會自動刪除，可填 1 以上的整數，預設 14；填 0 表示不刪
+    log-keep-days: 14
   # 一般模式（不帶 --force，只處理已載入區塊的告示牌）
   normal:
     # 每個 tick 最多處理幾筆，可填 1 到 128 的整數

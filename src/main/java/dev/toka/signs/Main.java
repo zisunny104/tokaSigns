@@ -39,6 +39,7 @@ public final class Main extends PluginBase implements cn.nukkit.event.Listener {
             getLogger().info(messages.text("log.loaded",registry.records().size()));
         }catch(Exception error){getLogger().error(messages.text("log.storageFailed"));throw new IllegalStateException("Sign storage could not be loaded; keep the original data",error);}
     }
+    com.google.gson.JsonObject inspect(int id,CommandSender actor,boolean refresh){return maintenance.inspect(id,actor,refresh,false);}
     boolean maintenanceRunning(){return maintenance!=null&&maintenance.running();}
     OrphanCleaner cleaner(){return cleaner;}
     private void configureCommandSuggestions(){

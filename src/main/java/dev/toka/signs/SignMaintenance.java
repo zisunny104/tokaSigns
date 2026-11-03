@@ -56,7 +56,10 @@ final class SignMaintenance {
             String[] expected=refresh?refreshed:created;
             out.add("expectedText",GSON.toJsonTree(created));
             if(validText(refreshed))out.add("expectedRefreshText",GSON.toJsonTree(refreshed));
-            boolean textMatches=Arrays.equals(before,expected)||(!refresh&&validText(refreshed)&&Arrays.equals(before,refreshed)),glowMatches=beforeGlowing==expectedGlowing;
+            // A sign whose lines are rewritten all the time by what it shows (the status sign) never equals one moment's text: only its glow is compared.
+            var liveTypes=main.getConfig().exists("maintenance.live-types")?main.getConfig().getIntegerList("maintenance.live-types"):java.util.List.of(41);
+            boolean live=!refresh&&liveTypes.contains(r.type());
+            boolean textMatches=live||Arrays.equals(before,expected)||(!refresh&&validText(refreshed)&&Arrays.equals(before,refreshed)),glowMatches=beforeGlowing==expectedGlowing;
             // Maintenance is also an explicit client resynchronization request. A matching server-side
             // state does not establish that the client received the latest text/glow packet.
             if(!refresh&&textMatches&&glowMatches)return result(out,"MATCH");

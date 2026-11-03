@@ -28,6 +28,8 @@ signs:
 # 維護工作（/sign check、/sign refresh、/sign repair）每個 tick 的處理量。
 # 實際數量會依 TPS、tick 使用率與近期耗時自動調整；下列數值是上限，不是固定每 tick 筆數。
 maintenance:
+  # 內容會一直自己變動的牌子類型（例如 status 狀態牌，編號 41）：維護檢查只比對發光，不比對牌面文字，避免每輪都被當成「受損」而重複修復。
+  live-types: [41]
   # 修復提示效果（自動修復與 /sign refresh、/sign repair 都適用）：牌面文字真的要改變時，先短暫顯示輸入時的寫法（第一行類型字、第二行代碼），再換成正式排版，看得出哪一個被修了。
   fix-flash:
     # 修復時是否先閃一下輸入排版，可填 true 或 false，預設 true

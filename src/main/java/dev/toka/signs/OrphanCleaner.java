@@ -87,11 +87,24 @@ final class OrphanCleaner {
             String status = main.inspect(record.id(), console, false).get("status").getAsString();
             if (dataLost || status.equals("TEXT_DIFFERS") || status.equals("STYLE_DIFFERS")) {
                 String done = main.inspect(record.id(), console, true).get("status").getAsString();
-                if (done.equals("UPDATED") || done.equals("RESENT")) mended.add(record.id());
+                if (!done.equals("UPDATED") && !done.equals("RESENT")) { stuck(record, done, null); return; }
+                // the repair only counts when the sign then matches its record; otherwise it would be "repaired" again every pass
+                var after = main.inspect(record.id(), console, false);
+                String now = after.get("status").getAsString();
+                if (now.equals("MATCH")) mended.add(record.id()); else stuck(record, now, after);
             }
         } catch (RuntimeException | LinkageError failure) {
             if (warned.first("mend" + record.id())) main.getLogger().warning(Main.tr("log.autoRepairFailed", record.id(), failure.getClass().getSimpleName()));
         }
+    }
+
+    /** A repair that did not hold: said once per sign with where it is and what differs, so it can be looked at. */
+    private void stuck(SignRegistry.SignRecord record, String status, com.google.gson.JsonObject detail) {
+        if (!warned.first("stuck" + record.id())) return;
+        String actual = detail != null && detail.has("actualText") ? detail.get("actualText").toString() : "-";
+        String expected = detail != null && detail.has("expectedText") ? detail.get("expectedText").toString() : "-";
+        String glow = detail != null && detail.has("actualGlowing") ? detail.get("actualGlowing") + "/" + detail.get("expectedGlowing") : "-";
+        main.getLogger().warning(Main.tr("log.autoRepairStuck", record.id(), record.world() + " " + record.x() + "," + record.y() + "," + record.z() + " 類型 " + record.type(), status, actual + " → " + expected, glow));
     }
 
     /** Drops the lines of removed-signs.log older than the days kept (config log-keep-days), at most twice a day. */
